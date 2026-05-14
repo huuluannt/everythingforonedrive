@@ -1,0 +1,19 @@
+{
+  "name": "Everything for OneDrive",
+  "short_name": "OneDrive Search",
+  "description": "Fast selected-folder OneDrive metadata search.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f7faff",
+  "theme_color": "#0b66d8",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
