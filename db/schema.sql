@@ -1,5 +1,6 @@
 create extension if not exists pgcrypto;
 create extension if not exists pg_trgm;
+create extension if not exists unaccent;
 
 create table if not exists app_sessions (
   id uuid primary key default gen_random_uuid(),

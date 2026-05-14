@@ -29,7 +29,7 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
 
 type SessionState =
   | { authenticated: false }
@@ -87,6 +87,7 @@ type FileVisual = {
   Icon: LucideIcon;
   label: string;
   className: string;
+  badge?: string;
 };
 
 const tabs: Array<{ id: Tab; label: string; icon: typeof Search }> = [
@@ -98,6 +99,7 @@ const tabs: Array<{ id: Tab; label: string; icon: typeof Search }> = [
 
 const logoSrc = "/brand/logo-evrtfod.png";
 
+const pdfExtensions = new Set(["pdf"]);
 const wordExtensions = new Set(["doc", "docx", "dot", "dotx"]);
 const excelExtensions = new Set(["xls", "xlsx", "xlsm", "csv"]);
 const powerpointExtensions = new Set(["ppt", "pptx", "pps", "ppsx"]);
@@ -163,6 +165,15 @@ function fileVisual(result: SearchResult): FileVisual {
   }
 
   const extension = result.extension?.toLowerCase() || "";
+
+  if (pdfExtensions.has(extension)) {
+    return {
+      Icon: FileText,
+      label: "PDF",
+      className: "bg-red-50 text-red-700 ring-red-200",
+      badge: "PDF",
+    };
+  }
 
   if (wordExtensions.has(extension)) {
     return { Icon: FileText, label: "Word", className: "bg-blue-50 text-blue-700 ring-blue-200" };
@@ -308,7 +319,11 @@ function SearchResultsSection({
               <div
                 className={`mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ring-1 ${visual.className}`}
               >
-                <Icon size={21} />
+                {visual.badge ? (
+                  <span className="text-[10px] font-black tracking-normal">{visual.badge}</span>
+                ) : (
+                  <Icon size={21} />
+                )}
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex min-w-0 items-start justify-between gap-2">
@@ -357,8 +372,15 @@ export function AppShell() {
   const [syncProgress, setSyncProgress] = useState<Record<string, SyncProgress>>({});
   const [syncingAll, setSyncingAll] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [floatingSearchBottom, setFloatingSearchBottom] = useState(104);
   const debouncedQuery = useDebouncedValue(query, 250);
   const autoSyncStarted = useRef(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const floatingSearchDrag = useRef({
+    moved: false,
+    startBottom: 104,
+    startY: 0,
+  });
 
   const activeFolder = folderStack[folderStack.length - 1];
   const indexedKeys = useMemo(
@@ -397,6 +419,51 @@ export function AppShell() {
       : "Sync status";
   const showSearchResults =
     activeTab === "search" || debouncedQuery.trim().length > 0 || Boolean(searchError);
+  const focusSearch = useCallback(() => {
+    window.requestAnimationFrame(() => {
+      searchInputRef.current?.focus();
+      searchInputRef.current?.select();
+    });
+  }, []);
+  const clearSearch = useCallback(() => {
+    setQuery("");
+    focusSearch();
+  }, [focusSearch]);
+  const startFloatingSearchDrag = useCallback((event: PointerEvent<HTMLButtonElement>) => {
+    floatingSearchDrag.current = {
+      moved: false,
+      startBottom: floatingSearchBottom,
+      startY: event.clientY,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }, [floatingSearchBottom]);
+  const moveFloatingSearch = useCallback((event: PointerEvent<HTMLButtonElement>) => {
+    if (!event.currentTarget.hasPointerCapture(event.pointerId)) {
+      return;
+    }
+
+    const delta = floatingSearchDrag.current.startY - event.clientY;
+
+    if (Math.abs(delta) > 4) {
+      floatingSearchDrag.current.moved = true;
+    }
+
+    const maxBottom = Math.max(104, window.innerHeight - 128);
+    const nextBottom = Math.min(
+      Math.max(88, floatingSearchDrag.current.startBottom + delta),
+      maxBottom,
+    );
+    setFloatingSearchBottom(nextBottom);
+  }, []);
+  const endFloatingSearchDrag = useCallback((event: PointerEvent<HTMLButtonElement>) => {
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+
+    if (!floatingSearchDrag.current.moved) {
+      focusSearch();
+    }
+  }, [focusSearch]);
 
   const saveSearchHistory = useCallback((items: string[]) => {
     setSearchHistory(items);
@@ -854,12 +921,27 @@ export function AppShell() {
             <Search size={19} className="shrink-0 text-orange-600" />
             <input
               id="global-search"
+              ref={searchInputRef}
               value={query}
               onChange={(event) => setQuery(event.target.value)}
+              onClick={(event) => event.currentTarget.select()}
+              onFocus={(event) => event.currentTarget.select()}
               placeholder="Search files, folders, ext:pdf, type:folder..."
               className="min-w-0 flex-1 bg-transparent text-base font-medium outline-none placeholder:text-slate-400"
               autoComplete="off"
             />
+            {query ? (
+              <button
+                type="button"
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={clearSearch}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:bg-orange-100 hover:text-orange-700"
+                title="Clear search"
+                aria-label="Clear search"
+              >
+                <X size={16} />
+              </button>
+            ) : null}
             <div className="hidden h-6 w-px bg-orange-100 sm:block" />
             <SlidersHorizontal size={16} className="hidden shrink-0 text-orange-600 sm:block" />
             <select
@@ -1133,6 +1215,29 @@ export function AppShell() {
           </section>
         ) : null}
       </section>
+
+      <button
+        type="button"
+        onPointerDown={startFloatingSearchDrag}
+        onPointerMove={moveFloatingSearch}
+        onPointerUp={endFloatingSearchDrag}
+        onPointerCancel={endFloatingSearchDrag}
+        onClick={(event) => {
+          if (floatingSearchDrag.current.moved) {
+            event.preventDefault();
+            return;
+          }
+
+          focusSearch();
+        }}
+        className="fixed right-4 z-40 flex h-14 items-center gap-2 rounded-full bg-orange-600 px-4 text-sm font-bold text-white shadow-lg shadow-orange-600/25 ring-1 ring-orange-400/40 transition hover:bg-orange-700 active:cursor-grabbing sm:right-6 touch-none"
+        style={{ bottom: `${floatingSearchBottom}px` }}
+        title="Focus search"
+        aria-label="Focus search"
+      >
+        <Search size={20} />
+        <span className="hidden sm:inline">Search</span>
+      </button>
 
       <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-blue-100 bg-white/95 px-3 pb-3 pt-2 backdrop-blur">
         <div className="mx-auto grid max-w-5xl grid-cols-4 gap-2">

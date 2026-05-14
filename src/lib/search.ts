@@ -1,10 +1,22 @@
 export type ParsedSearch = {
   text: string;
   normalizedText: string;
+  searchTerms: string[];
   extensions: string[];
   itemType?: "file" | "folder";
   pathKeyword?: string;
 };
+
+export function normalizeSearchText(input: string) {
+  return input
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "d")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
 
 export function parseSearchQuery(input: string): ParsedSearch {
   const tokens = input.trim().split(/\s+/).filter(Boolean);
@@ -22,7 +34,7 @@ export function parseSearchQuery(input: string): ParsedSearch {
     }
 
     const key = token.slice(0, separatorIndex).toLowerCase();
-    const value = token.slice(separatorIndex + 1).trim().toLowerCase();
+    const value = normalizeSearchText(token.slice(separatorIndex + 1));
 
     if (!value) {
       continue;
@@ -47,10 +59,12 @@ export function parseSearchQuery(input: string): ParsedSearch {
   }
 
   const text = textTokens.join(" ");
+  const normalizedText = normalizeSearchText(text);
 
   return {
     text,
-    normalizedText: text.toLowerCase(),
+    normalizedText,
+    searchTerms: normalizedText.split(/\s+/).filter(Boolean),
     extensions,
     itemType,
     pathKeyword,

@@ -6,6 +6,8 @@ import { parseSearchQuery } from "@/lib/search";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+let searchExtensionReady = false;
+
 function resultLimit(value: string | null) {
   const parsed = Number(value);
 
@@ -24,6 +26,31 @@ function resultSort(value: string | null) {
   return "relevance";
 }
 
+async function ensureSearchExtension(sql: ReturnType<typeof getSql>) {
+  if (searchExtensionReady) {
+    return;
+  }
+
+  await sql`create extension if not exists unaccent`;
+  searchExtensionReady = true;
+}
+
+function searchTermCondition(
+  sql: ReturnType<typeof getSql>,
+  column: "search_text" | "path_search_text",
+  term: string,
+) {
+  if (term.length <= 2) {
+    return column === "search_text"
+      ? sql`search_text like ${`% ${term} %`}`
+      : sql`path_search_text like ${`% ${term} %`}`;
+  }
+
+  return column === "search_text"
+    ? sql`search_text like ${`%${term}%`}`
+    : sql`path_search_text like ${`%${term}%`}`;
+}
+
 export async function GET(request: Request) {
   try {
     const session = await requireSession();
@@ -32,33 +59,39 @@ export async function GET(request: Request) {
     const limit = resultLimit(url.searchParams.get("limit"));
     const sort = resultSort(url.searchParams.get("sort"));
     const sql = getSql();
-    const conditions = [
+    await ensureSearchExtension(sql);
+
+    const baseConditions = [
       sql`account_id = ${session.accountId}`,
       sql`deleted = false`,
     ];
 
-    if (parsed.normalizedText) {
-      conditions.push(sql`normalized_name like ${`%${parsed.normalizedText}%`}`);
-    }
-
     if (parsed.extensions.length > 0) {
-      conditions.push(sql`extension in ${sql(parsed.extensions)}`);
+      baseConditions.push(sql`extension in ${sql(parsed.extensions)}`);
     }
 
     if (parsed.itemType) {
-      conditions.push(sql`item_type = ${parsed.itemType}`);
+      baseConditions.push(sql`item_type = ${parsed.itemType}`);
     }
+
+    const searchConditions = parsed.searchTerms.map((term) =>
+      searchTermCondition(sql, "search_text", term),
+    );
 
     if (parsed.pathKeyword) {
-      conditions.push(sql`lower(path) like ${`%${parsed.pathKeyword}%`}`);
+      searchConditions.push(searchTermCondition(sql, "path_search_text", parsed.pathKeyword));
     }
 
-    const where = conditions.reduce((left, right) => sql`${left} and ${right}`);
+    const baseWhere = baseConditions.reduce((left, right) => sql`${left} and ${right}`);
+    const searchWhere = searchConditions.length > 0
+      ? searchConditions.reduce((left, right) => sql`${left} and ${right}`)
+      : sql`true`;
     const exact = parsed.normalizedText;
-    const prefix = `${parsed.normalizedText}%`;
-    const substring = `%${parsed.normalizedText}%`;
+    const exactName = ` ${parsed.normalizedText} `;
+    const prefix = ` ${parsed.normalizedText}%`;
+    const substring = `% ${parsed.normalizedText}%`;
     const rows = await sql`
-      with ranked_items as (
+      with searchable_items as (
         select id,
                drive_id,
                indexed_folder_id,
@@ -72,14 +105,40 @@ export async function GET(request: Request) {
                web_url,
                path,
                normalized_name,
+               ' ' || regexp_replace(lower(unaccent(coalesce(normalized_name, ''))), '[^[:alnum:]]+', ' ', 'g') || ' ' as name_search_text,
+               ' ' || regexp_replace(lower(unaccent(coalesce(path, ''))), '[^[:alnum:]]+', ' ', 'g') || ' ' as path_search_text,
+               ' ' || regexp_replace(
+                 lower(unaccent(coalesce(normalized_name, '') || ' ' || coalesce(path, ''))),
+                 '[^[:alnum:]]+',
+                 ' ',
+                 'g'
+               ) || ' ' as search_text
+        from drive_items
+        where ${baseWhere}
+      ),
+      ranked_items as (
+        select id,
+               drive_id,
+               indexed_folder_id,
+               item_id,
+               parent_id,
+               name,
+               item_type,
+               extension,
+               size,
+               modified_date_time,
+               web_url,
+               path,
+               normalized_name,
+               name_search_text,
                case
-                 when ${exact} <> '' and normalized_name = ${exact} then 0
-                 when ${exact} <> '' and normalized_name like ${prefix} then 1
-                 when ${exact} <> '' and normalized_name like ${substring} then 2
+                 when ${exact} <> '' and name_search_text = ${exactName} then 0
+                 when ${exact} <> '' and name_search_text like ${prefix} then 1
+                 when ${exact} <> '' and search_text like ${substring} then 2
                  else 3
                end as search_rank
-        from drive_items
-        where ${where}
+        from searchable_items
+        where ${searchWhere}
       )
       select id,
              drive_id,

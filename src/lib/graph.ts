@@ -1,4 +1,5 @@
 import { GRAPH_BASE_URL } from "@/lib/config";
+import { normalizeSearchText } from "@/lib/search";
 
 export type GraphDriveItem = {
   id: string;
@@ -124,7 +125,7 @@ export function graphItemPath(item: GraphDriveItem) {
 }
 
 export function normalizeName(name: string) {
-  return name.trim().toLowerCase();
+  return normalizeSearchText(name);
 }
 
 export function itemExtension(name: string, type: "file" | "folder") {
