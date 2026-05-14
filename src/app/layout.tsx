@@ -14,12 +14,20 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  applicationName: "Everything for OneDrive",
   title: "Everything for OneDrive",
   description: "Fast selected-folder OneDrive name search for Android.",
   manifest: "/manifest.webmanifest",
   icons: {
-    icon: "/brand/logo-evrtfod.png",
-    apple: "/brand/logo-evrtfod.png",
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/icons/icon-192.png", type: "image/png", sizes: "192x192" },
+      { url: "/icons/icon-512.png", type: "image/png", sizes: "512x512" },
+    ],
+    shortcut: "/favicon.ico",
+    apple: [
+      { url: "/icons/apple-touch-icon.png", type: "image/png", sizes: "180x180" },
+    ],
   },
   appleWebApp: {
     capable: true,
@@ -29,7 +37,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0b66d8",
+  themeColor: "#f97316",
 };
 
 export default function RootLayout({

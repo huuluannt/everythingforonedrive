@@ -29,7 +29,16 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent,
+  type ReactNode,
+} from "react";
+import { normalizeSearchText, parseSearchQuery } from "@/lib/search";
 
 type SessionState =
   | { authenticated: false }
@@ -278,11 +287,104 @@ function largeFolderWarning(itemCount: number) {
   return null;
 }
 
+function normalizedHighlightSource(text: string) {
+  const chars: string[] = [];
+  const positions: number[] = [];
+
+  Array.from(text).forEach((char, index) => {
+    const normalized = normalizeSearchText(char);
+    const safeChar = normalized && /^[a-z0-9]$/.test(normalized) ? normalized : " ";
+
+    chars.push(safeChar);
+    positions.push(index);
+  });
+
+  return { text: chars.join(""), positions };
+}
+
+function highlightRanges(text: string, terms: string[]) {
+  const cleanTerms = Array.from(new Set(terms.map(normalizeSearchText).filter(Boolean)));
+
+  if (cleanTerms.length === 0) {
+    return [];
+  }
+
+  const source = normalizedHighlightSource(text);
+  const ranges: Array<{ start: number; end: number }> = [];
+
+  cleanTerms.forEach((term) => {
+    let index = source.text.indexOf(term);
+
+    while (index >= 0) {
+      const start = source.positions[index];
+      const end = source.positions[index + term.length - 1] + 1;
+
+      ranges.push({ start, end });
+      index = source.text.indexOf(term, index + term.length);
+    }
+  });
+
+  return ranges
+    .sort((left, right) => left.start - right.start || right.end - left.end)
+    .reduce<Array<{ start: number; end: number }>>((merged, range) => {
+      const previous = merged[merged.length - 1];
+
+      if (previous && range.start <= previous.end) {
+        previous.end = Math.max(previous.end, range.end);
+      } else {
+        merged.push({ ...range });
+      }
+
+      return merged;
+    }, []);
+}
+
+function HighlightedText({
+  text,
+  terms,
+}: {
+  text: string;
+  terms: string[];
+}) {
+  const ranges = highlightRanges(text, terms);
+
+  if (ranges.length === 0) {
+    return <>{text}</>;
+  }
+
+  const segments: ReactNode[] = [];
+  let cursor = 0;
+
+  ranges.forEach((range, index) => {
+    if (cursor < range.start) {
+      segments.push(text.slice(cursor, range.start));
+    }
+
+    segments.push(
+      <mark
+        key={`${range.start}-${range.end}-${index}`}
+        className="rounded bg-amber-100 px-0.5 text-inherit ring-1 ring-amber-200"
+      >
+        {text.slice(range.start, range.end)}
+      </mark>,
+    );
+    cursor = range.end;
+  });
+
+  if (cursor < text.length) {
+    segments.push(text.slice(cursor));
+  }
+
+  return <>{segments}</>;
+}
+
 function SearchResultsSection({
+  highlightTerms,
   results,
   searchError,
   searching,
 }: {
+  highlightTerms: string[];
   results: SearchResult[];
   searchError: string | null;
   searching: boolean;
@@ -328,12 +430,12 @@ function SearchResultsSection({
               <div className="min-w-0 flex-1">
                 <div className="flex min-w-0 items-start justify-between gap-2">
                   <h3 className="min-w-0 flex-1 break-words text-sm font-semibold text-slate-950 [overflow-wrap:anywhere]">
-                    {result.name}
+                    <HighlightedText text={result.name} terms={highlightTerms} />
                   </h3>
                   <ExternalLink size={15} className="mt-0.5 shrink-0 text-slate-400" />
                 </div>
                 <p className="mt-1 break-words text-xs leading-5 text-slate-500 [overflow-wrap:anywhere]">
-                  {result.path}
+                  <HighlightedText text={result.path} terms={highlightTerms} />
                 </p>
                 <div className="mt-2 flex flex-wrap gap-2 text-[11px] font-medium text-slate-600">
                   <span className="rounded-lg bg-slate-100 px-2 py-1">{visual.label}</span>
@@ -372,13 +474,13 @@ export function AppShell() {
   const [syncProgress, setSyncProgress] = useState<Record<string, SyncProgress>>({});
   const [syncingAll, setSyncingAll] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [floatingSearchBottom, setFloatingSearchBottom] = useState(104);
+  const [floatingSearchBottom, setFloatingSearchBottom] = useState(88);
   const debouncedQuery = useDebouncedValue(query, 250);
   const autoSyncStarted = useRef(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const floatingSearchDrag = useRef({
     moved: false,
-    startBottom: 104,
+    startBottom: 88,
     startY: 0,
   });
 
@@ -419,6 +521,13 @@ export function AppShell() {
       : "Sync status";
   const showSearchResults =
     activeTab === "search" || debouncedQuery.trim().length > 0 || Boolean(searchError);
+  const highlightTerms = useMemo(() => {
+    const parsed = parseSearchQuery(query);
+
+    return parsed.pathKeyword
+      ? [...parsed.searchTerms, parsed.pathKeyword]
+      : parsed.searchTerms;
+  }, [query]);
   const focusSearch = useCallback(() => {
     window.requestAnimationFrame(() => {
       searchInputRef.current?.focus();
@@ -448,9 +557,9 @@ export function AppShell() {
       floatingSearchDrag.current.moved = true;
     }
 
-    const maxBottom = Math.max(104, window.innerHeight - 128);
+    const maxBottom = Math.max(88, window.innerHeight - 128);
     const nextBottom = Math.min(
-      Math.max(88, floatingSearchDrag.current.startBottom + delta),
+      Math.max(72, floatingSearchDrag.current.startBottom + delta),
       maxBottom,
     );
     setFloatingSearchBottom(nextBottom);
@@ -874,7 +983,7 @@ export function AppShell() {
   }
 
   return (
-    <main className="min-h-screen bg-[var(--background)] pb-24 text-slate-950">
+    <main className="min-h-screen bg-[var(--background)] pb-20 text-slate-950">
       <header className="sticky top-0 z-40 border-b border-orange-100 bg-[rgba(255,251,245,0.94)] px-4 py-3 shadow-sm backdrop-blur">
         <div className="mx-auto flex max-w-5xl flex-col gap-3">
           <div className="flex items-center justify-between gap-3">
@@ -968,6 +1077,7 @@ export function AppShell() {
 
         {showSearchResults ? (
           <SearchResultsSection
+            highlightTerms={highlightTerms}
             results={sortedResults}
             searchError={searchError}
             searching={searching}
@@ -992,12 +1102,12 @@ export function AppShell() {
               ) : null}
             </div>
             {searchHistory.length > 0 ? (
-              <div className="flex gap-2 overflow-x-auto pb-1">
+              <div className="flex gap-1.5 overflow-x-auto pb-0.5">
                 {searchHistory.map((item) => (
                   <button
                     key={item}
                     onClick={() => setQuery(item)}
-                    className="shrink-0 rounded-full border border-orange-100 bg-orange-50 px-3 py-1.5 text-xs font-semibold text-orange-800"
+                    className="flex h-6 shrink-0 items-center rounded-full border border-orange-100 bg-orange-50 px-2 text-[10px] font-semibold leading-none text-orange-800"
                   >
                     {item}
                   </button>
@@ -1239,7 +1349,7 @@ export function AppShell() {
         <span className="hidden sm:inline">Search</span>
       </button>
 
-      <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-blue-100 bg-white/95 px-3 pb-3 pt-2 backdrop-blur">
+      <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-blue-100 bg-white/95 px-3 pb-2 pt-1.5 backdrop-blur">
         <div className="mx-auto grid max-w-5xl grid-cols-4 gap-2">
           {tabs.map((tab) => {
             const Icon = tab.icon;
@@ -1249,11 +1359,11 @@ export function AppShell() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex h-14 flex-col items-center justify-center gap-1 rounded-xl text-xs font-semibold ${
+                className={`flex h-11 flex-col items-center justify-center gap-0.5 rounded-lg text-[11px] font-semibold ${
                   active ? "bg-blue-700 text-white" : "text-slate-500"
                 }`}
               >
-                <Icon size={18} />
+                <Icon size={16} />
                 {tab.label}
               </button>
             );
