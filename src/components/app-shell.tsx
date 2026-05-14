@@ -1,15 +1,24 @@
 "use client";
 
+import Image from "next/image";
 import {
   ArrowLeft,
   Check,
-  Cloud,
   ExternalLink,
   File,
+  FileArchive,
+  FileAudio,
+  FileCode2,
+  FileImage,
+  FileSpreadsheet,
+  FileText,
+  FileVideo,
   Folder,
   FolderPlus,
+  FolderOpen,
   History,
   LogOut,
+  Presentation,
   RefreshCcw,
   Search,
   Settings,
@@ -18,6 +27,7 @@ import {
   Trash2,
   TriangleAlert,
   X,
+  type LucideIcon,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -73,12 +83,30 @@ type SyncProgress = {
   retryAfter?: number;
 };
 
+type FileVisual = {
+  Icon: LucideIcon;
+  label: string;
+  className: string;
+};
+
 const tabs: Array<{ id: Tab; label: string; icon: typeof Search }> = [
   { id: "search", label: "Search", icon: Search },
   { id: "folders", label: "Folders", icon: FolderPlus },
   { id: "sync", label: "Sync", icon: RefreshCcw },
   { id: "settings", label: "Settings", icon: Settings },
 ];
+
+const logoSrc = "/brand/logo-evrtfod.png";
+
+const wordExtensions = new Set(["doc", "docx", "dot", "dotx"]);
+const excelExtensions = new Set(["xls", "xlsx", "xlsm", "csv"]);
+const powerpointExtensions = new Set(["ppt", "pptx", "pps", "ppsx"]);
+const textExtensions = new Set(["txt", "md", "rtf", "log"]);
+const imageExtensions = new Set(["jpg", "jpeg", "png", "gif", "webp", "bmp", "svg", "heic"]);
+const audioExtensions = new Set(["mp3", "wav", "m4a", "aac", "flac", "ogg"]);
+const videoExtensions = new Set(["mp4", "mov", "mkv", "avi", "webm", "wmv"]);
+const archiveExtensions = new Set(["zip", "rar", "7z", "tar", "gz"]);
+const codeExtensions = new Set(["js", "ts", "tsx", "jsx", "html", "css", "json", "xml"]);
 
 function useDebouncedValue<T>(value: T, delay: number) {
   const [debounced, setDebounced] = useState(value);
@@ -123,6 +151,64 @@ function formatDate(value: string | null) {
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(value));
+}
+
+function fileVisual(result: SearchResult): FileVisual {
+  if (result.itemType === "folder") {
+    return {
+      Icon: FolderOpen,
+      label: "Folder",
+      className: "bg-amber-50 text-amber-700 ring-amber-200",
+    };
+  }
+
+  const extension = result.extension?.toLowerCase() || "";
+
+  if (wordExtensions.has(extension)) {
+    return { Icon: FileText, label: "Word", className: "bg-blue-50 text-blue-700 ring-blue-200" };
+  }
+
+  if (excelExtensions.has(extension)) {
+    return {
+      Icon: FileSpreadsheet,
+      label: "Excel",
+      className: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+    };
+  }
+
+  if (powerpointExtensions.has(extension)) {
+    return {
+      Icon: Presentation,
+      label: "PowerPoint",
+      className: "bg-orange-50 text-orange-700 ring-orange-200",
+    };
+  }
+
+  if (textExtensions.has(extension)) {
+    return { Icon: FileText, label: "Text", className: "bg-slate-100 text-slate-700 ring-slate-200" };
+  }
+
+  if (imageExtensions.has(extension)) {
+    return { Icon: FileImage, label: "Image", className: "bg-fuchsia-50 text-fuchsia-700 ring-fuchsia-200" };
+  }
+
+  if (audioExtensions.has(extension)) {
+    return { Icon: FileAudio, label: "Audio", className: "bg-rose-50 text-rose-700 ring-rose-200" };
+  }
+
+  if (videoExtensions.has(extension)) {
+    return { Icon: FileVideo, label: "Video", className: "bg-red-50 text-red-700 ring-red-200" };
+  }
+
+  if (archiveExtensions.has(extension)) {
+    return { Icon: FileArchive, label: "Archive", className: "bg-yellow-50 text-yellow-700 ring-yellow-200" };
+  }
+
+  if (codeExtensions.has(extension)) {
+    return { Icon: FileCode2, label: "Code", className: "bg-indigo-50 text-indigo-700 ring-indigo-200" };
+  }
+
+  return { Icon: File, label: "File", className: "bg-slate-50 text-slate-600 ring-slate-200" };
 }
 
 function statusClass(status: IndexedFolder["syncStatus"]) {
@@ -181,6 +267,78 @@ function largeFolderWarning(itemCount: number) {
   return null;
 }
 
+function SearchResultsSection({
+  results,
+  searchError,
+  searching,
+}: {
+  results: SearchResult[];
+  searchError: string | null;
+  searching: boolean;
+}) {
+  return (
+    <section className="flex flex-col gap-2">
+      <div className="flex items-center justify-between px-1">
+        <h2 className="text-sm font-semibold text-slate-700">Results</h2>
+        <span className="text-xs text-slate-500">
+          {searching ? "Searching..." : `${results.length} shown`}
+        </span>
+      </div>
+      {searchError ? (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-800">
+          {searchError}
+        </div>
+      ) : results.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-blue-200 bg-white p-6 text-center text-sm text-slate-500">
+          No indexed results yet. Add a folder and run sync first.
+        </div>
+      ) : (
+        results.map((result) => {
+          const visual = fileVisual(result);
+          const Icon = visual.Icon;
+
+          return (
+            <a
+              key={result.id}
+              href={result.webUrl || "#"}
+              target="_blank"
+              rel="noreferrer"
+              className="flex gap-3 rounded-xl border border-blue-100 bg-white p-3 shadow-sm transition hover:border-orange-300 hover:shadow-md"
+            >
+              <div
+                className={`mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ring-1 ${visual.className}`}
+              >
+                <Icon size={21} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex min-w-0 items-start justify-between gap-2">
+                  <h3 className="min-w-0 flex-1 break-words text-sm font-semibold text-slate-950 [overflow-wrap:anywhere]">
+                    {result.name}
+                  </h3>
+                  <ExternalLink size={15} className="mt-0.5 shrink-0 text-slate-400" />
+                </div>
+                <p className="mt-1 break-words text-xs leading-5 text-slate-500 [overflow-wrap:anywhere]">
+                  {result.path}
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2 text-[11px] font-medium text-slate-600">
+                  <span className="rounded-lg bg-slate-100 px-2 py-1">{visual.label}</span>
+                  <span className="rounded-lg bg-slate-100 px-2 py-1">
+                    {result.extension || "no ext"}
+                  </span>
+                  <span className="rounded-lg bg-slate-100 px-2 py-1">{formatSize(result.size)}</span>
+                  <span className="rounded-lg bg-slate-100 px-2 py-1">
+                    {formatDate(result.modifiedDateTime)}
+                  </span>
+                </div>
+              </div>
+            </a>
+          );
+        })
+      )}
+    </section>
+  );
+}
+
 export function AppShell() {
   const [session, setSession] = useState<SessionState | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>("search");
@@ -211,6 +369,34 @@ export function AppShell() {
     () => indexedFolders.filter((folder) => folder.enabled),
     [indexedFolders],
   );
+  const sortedResults = useMemo(
+    () =>
+      [...results].sort((left, right) => {
+        if (left.itemType !== right.itemType) {
+          return left.itemType === "folder" ? -1 : 1;
+        }
+
+        return 0;
+      }),
+    [results],
+  );
+  const syncFinished =
+    activeIndexedFolders.length > 0 &&
+    activeIndexedFolders.every((folder) => folder.syncStatus === "idle") &&
+    busyFolderIds.size === 0 &&
+    !syncingAll;
+  const syncNeedsAttention =
+    activeIndexedFolders.length === 0 ||
+    syncingAll ||
+    busyFolderIds.size > 0 ||
+    activeIndexedFolders.some((folder) => folder.syncStatus !== "idle");
+  const syncDotLabel = syncFinished
+    ? "All selected folders are synced"
+    : syncNeedsAttention
+      ? "Sync is running or not finished yet"
+      : "Sync status";
+  const showSearchResults =
+    activeTab === "search" || debouncedQuery.trim().length > 0 || Boolean(searchError);
 
   const saveSearchHistory = useCallback((items: string[]) => {
     setSearchHistory(items);
@@ -364,7 +550,7 @@ export function AppShell() {
 
       await loadIndexedFolders();
       if (!options.quiet) {
-        setMessage("Sync finished.");
+        setMessage(null);
       }
       return true;
     } catch (error) {
@@ -388,21 +574,18 @@ export function AppShell() {
 
     setSyncingAll(true);
     setActiveTab("sync");
-    setMessage(`Syncing ${activeIndexedFolders.length} selected folders...`);
+    setMessage(null);
 
-    let completed = 0;
     let failed = 0;
 
     for (const folder of activeIndexedFolders) {
       const ok = await runSync(folder.id, { quiet: true });
-      completed += ok ? 1 : 0;
       failed += ok ? 0 : 1;
-      setMessage(`Sync all: ${completed} done${failed ? `, ${failed} failed` : ""}.`);
     }
 
     setSyncingAll(false);
     await loadIndexedFolders();
-    setMessage(failed ? `Sync all finished with ${failed} folder issue(s).` : "Sync all finished.");
+    setMessage(failed ? `Sync finished with ${failed} folder issue(s).` : null);
   }, [activeIndexedFolders, loadIndexedFolders, runSync, syncingAll]);
 
   async function addFolder(folder: OneDriveFolder) {
@@ -522,7 +705,7 @@ export function AppShell() {
       return;
     }
 
-    const controller = new AbortController();
+    let cancelled = false;
 
     async function search() {
       setSearching(true);
@@ -531,8 +714,11 @@ export function AppShell() {
       try {
         const response = await fetch(
           `/api/search?q=${encodeURIComponent(debouncedQuery)}&limit=50&sort=${searchSort}`,
-          { signal: controller.signal },
         );
+
+        if (cancelled) {
+          return;
+        }
 
         if (response.status === 401) {
           handleUnauthorized();
@@ -545,16 +731,31 @@ export function AppShell() {
         }
 
         const data = (await response.json()) as { results: SearchResult[] };
+
+        if (cancelled) {
+          return;
+        }
+
         setResults(data.results);
         rememberSearch(debouncedQuery);
+      } catch {
+        if (cancelled) {
+          return;
+        }
+
+        setSearchError("Search failed. Try again after refreshing sync.");
       } finally {
-        setSearching(false);
+        if (!cancelled) {
+          setSearching(false);
+        }
       }
     }
 
     search();
 
-    return () => controller.abort();
+    return () => {
+      cancelled = true;
+    };
   }, [debouncedQuery, handleUnauthorized, rememberSearch, searchSort, session?.authenticated]);
 
   if (session === null) {
@@ -570,18 +771,23 @@ export function AppShell() {
       <main className="min-h-screen bg-[var(--background)] px-5 py-8">
         <section className="mx-auto flex max-w-md flex-col gap-7">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-700 text-white">
-              <Cloud size={24} />
-            </div>
+            <Image
+              src={logoSrc}
+              alt="Everything for OneDrive logo"
+              width={56}
+              height={56}
+              priority
+              className="h-14 w-14 rounded-2xl object-cover shadow-sm ring-1 ring-orange-200"
+            />
             <div>
               <h1 className="text-2xl font-semibold tracking-normal text-slate-950">
                 Everything for OneDrive
               </h1>
-              <p className="text-sm text-slate-600">Personal selected-folder index.</p>
+              <p className="text-sm text-slate-600">Fast selected-folder search.</p>
             </div>
           </div>
 
-          <div className="rounded-2xl border border-blue-100 bg-white p-5 shadow-sm">
+          <div className="rounded-2xl border border-orange-100 bg-white p-5 shadow-sm">
             <h2 className="text-lg font-semibold text-slate-950">Sign in with Microsoft</h2>
             <p className="mt-2 text-sm leading-6 text-slate-600">
               The app requests only profile access and read-only OneDrive metadata. It stores file and
@@ -589,7 +795,7 @@ export function AppShell() {
             </p>
             <a
               href="/api/auth/microsoft/login"
-              className="mt-5 flex h-12 items-center justify-center gap-2 rounded-xl bg-blue-700 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-800"
+              className="mt-5 flex h-12 items-center justify-center gap-2 rounded-xl bg-orange-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-700"
             >
               <Shield size={18} />
               Continue with Microsoft
@@ -602,22 +808,72 @@ export function AppShell() {
 
   return (
     <main className="min-h-screen bg-[var(--background)] pb-24 text-slate-950">
-      <header className="sticky top-0 z-20 border-b border-blue-100 bg-[rgba(247,250,255,0.92)] px-4 py-3 backdrop-blur">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-3">
-          <div className="min-w-0">
-            <h1 className="truncate text-lg font-semibold tracking-normal">Everything for OneDrive</h1>
-            <p className="truncate text-xs text-slate-600">
-              {session.user.displayName || session.user.email || "Microsoft account"}
-            </p>
+      <header className="sticky top-0 z-40 border-b border-orange-100 bg-[rgba(255,251,245,0.94)] px-4 py-3 shadow-sm backdrop-blur">
+        <div className="mx-auto flex max-w-5xl flex-col gap-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-3">
+              <Image
+                src={logoSrc}
+                alt="Everything for OneDrive logo"
+                width={48}
+                height={48}
+                priority
+                className="h-12 w-12 rounded-2xl object-cover shadow-sm ring-1 ring-orange-200"
+              />
+              <div className="min-w-0">
+                <h1 className="truncate text-lg font-semibold tracking-normal">Everything for OneDrive</h1>
+                <p className="truncate text-xs font-medium text-slate-600">
+                  {session.user.email || session.user.displayName || "Microsoft account"}
+                </p>
+              </div>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <div
+                className="flex h-10 items-center gap-2 rounded-xl border border-orange-100 bg-white px-3 text-xs font-semibold text-slate-600 shadow-sm"
+                title={syncDotLabel}
+                aria-label={syncDotLabel}
+              >
+                <span
+                  className={`h-2.5 w-2.5 rounded-full ${
+                    syncFinished ? "bg-emerald-500" : "animate-pulse bg-amber-500"
+                  }`}
+                />
+                <span className="hidden sm:inline">{syncFinished ? "Synced" : "Syncing"}</span>
+              </div>
+              <form action="/api/auth/logout" method="post">
+                <button
+                  className="flex h-10 w-10 items-center justify-center rounded-xl border border-orange-100 bg-white text-slate-700 shadow-sm"
+                  title="Sign out"
+                >
+                  <LogOut size={18} />
+                </button>
+              </form>
+            </div>
           </div>
-          <form action="/api/auth/logout" method="post">
-            <button
-              className="flex h-10 w-10 items-center justify-center rounded-xl border border-blue-100 bg-white text-slate-700 shadow-sm"
-              title="Sign out"
+          <div className="flex min-h-12 items-center gap-2 rounded-2xl border border-orange-100 bg-white px-3 shadow-sm">
+            <Search size={19} className="shrink-0 text-orange-600" />
+            <input
+              id="global-search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search files, folders, ext:pdf, type:folder..."
+              className="min-w-0 flex-1 bg-transparent text-base font-medium outline-none placeholder:text-slate-400"
+              autoComplete="off"
+            />
+            <div className="hidden h-6 w-px bg-orange-100 sm:block" />
+            <SlidersHorizontal size={16} className="hidden shrink-0 text-orange-600 sm:block" />
+            <select
+              aria-label="Sort search results"
+              value={searchSort}
+              onChange={(event) => setSearchSort(event.target.value as SearchSort)}
+              className="w-24 shrink-0 bg-transparent text-xs font-semibold text-slate-700 outline-none sm:w-40"
             >
-              <LogOut size={18} />
-            </button>
-          </form>
+              <option value="relevance">Relevance</option>
+              <option value="modified">Modified</option>
+              <option value="name">Name A-Z</option>
+              <option value="size">Largest</option>
+            </select>
+          </div>
         </div>
       </header>
 
@@ -628,126 +884,47 @@ export function AppShell() {
           </div>
         ) : null}
 
-        {activeTab === "search" ? (
-          <div className="flex flex-col gap-4">
-            <section className="rounded-2xl border border-blue-100 bg-white p-4 shadow-sm">
-              <label className="text-xs font-semibold uppercase text-slate-500" htmlFor="search">
-                Search indexed files
-              </label>
-              <div className="mt-2 flex h-12 items-center gap-2 rounded-xl border border-blue-100 bg-blue-50 px-3">
-                <Search size={19} className="text-blue-700" />
-                <input
-                  id="search"
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  placeholder="ext:pdf type:file budget"
-                  className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-slate-400"
-                  autoComplete="off"
-                />
-              </div>
-              <p className="mt-2 text-xs text-slate-500">
-                Filters: ext:pdf, ext:docx, type:file, type:folder, path:keyword
-              </p>
-              <div className="mt-3 flex items-center gap-2 rounded-xl border border-blue-100 bg-white px-3 py-2">
-                <SlidersHorizontal size={16} className="text-blue-700" />
-                <label className="text-xs font-semibold text-slate-500" htmlFor="sort">
-                  Sort
-                </label>
-                <select
-                  id="sort"
-                  value={searchSort}
-                  onChange={(event) => setSearchSort(event.target.value as SearchSort)}
-                  className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-slate-800 outline-none"
-                >
-                  <option value="relevance">Relevance</option>
-                  <option value="modified">Modified newest</option>
-                  <option value="name">Name A-Z</option>
-                  <option value="size">Size largest</option>
-                </select>
-              </div>
-              {searchHistory.length > 0 ? (
-                <div className="mt-3">
-                  <div className="mb-2 flex items-center justify-between">
-                    <span className="flex items-center gap-1.5 text-xs font-semibold text-slate-500">
-                      <History size={14} />
-                      Recent searches
-                    </span>
-                    <button
-                      onClick={() => saveSearchHistory([])}
-                      className="flex h-7 items-center gap-1 rounded-lg px-2 text-xs font-semibold text-slate-500"
-                    >
-                      <X size={13} />
-                      Clear
-                    </button>
-                  </div>
-                  <div className="flex gap-2 overflow-x-auto pb-1">
-                    {searchHistory.map((item) => (
-                      <button
-                        key={item}
-                        onClick={() => setQuery(item)}
-                        className="shrink-0 rounded-full border border-blue-100 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-800"
-                      >
-                        {item}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-            </section>
+        {showSearchResults ? (
+          <SearchResultsSection
+            results={sortedResults}
+            searchError={searchError}
+            searching={searching}
+          />
+        ) : null}
 
-            <section className="flex flex-col gap-2">
-              <div className="flex items-center justify-between px-1">
-                <h2 className="text-sm font-semibold text-slate-700">Results</h2>
-                <span className="text-xs text-slate-500">
-                  {searching ? "Searching..." : `${results.length} shown`}
-                </span>
-              </div>
-              {searchError ? (
-                <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-800">
-                  {searchError}
-                </div>
-              ) : results.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-blue-200 bg-white p-6 text-center text-sm text-slate-500">
-                  No indexed results yet. Add a folder and run sync first.
-                </div>
-              ) : (
-                results.map((result) => (
-                  <a
-                    key={result.id}
-                    href={result.webUrl || "#"}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex gap-3 rounded-2xl border border-blue-100 bg-white p-3 shadow-sm transition hover:border-blue-300"
+        {activeTab === "search" ? (
+          <section className="rounded-xl border border-orange-100 bg-white p-3 shadow-sm">
+            <div className="mb-2 flex items-center justify-between">
+              <span className="flex items-center gap-1.5 text-xs font-semibold text-slate-500">
+                <History size={14} />
+                Recent searches
+              </span>
+              {searchHistory.length > 0 ? (
+                <button
+                  onClick={() => saveSearchHistory([])}
+                  className="flex h-7 items-center gap-1 rounded-lg px-2 text-xs font-semibold text-slate-500"
+                >
+                  <X size={13} />
+                  Clear
+                </button>
+              ) : null}
+            </div>
+            {searchHistory.length > 0 ? (
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {searchHistory.map((item) => (
+                  <button
+                    key={item}
+                    onClick={() => setQuery(item)}
+                    className="shrink-0 rounded-full border border-orange-100 bg-orange-50 px-3 py-1.5 text-xs font-semibold text-orange-800"
                   >
-                    <div className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
-                      {result.itemType === "folder" ? <Folder size={20} /> : <File size={20} />}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-start justify-between gap-2">
-                        <h3 className="break-words text-sm font-semibold text-slate-950">
-                          {result.name}
-                        </h3>
-                        <ExternalLink size={15} className="mt-0.5 shrink-0 text-slate-400" />
-                      </div>
-                      <p className="mt-1 break-words text-xs leading-5 text-slate-500">{result.path}</p>
-                      <div className="mt-2 flex flex-wrap gap-2 text-[11px] font-medium text-slate-600">
-                        <span className="rounded-lg bg-slate-100 px-2 py-1">{result.itemType}</span>
-                        <span className="rounded-lg bg-slate-100 px-2 py-1">
-                          {result.extension || "no ext"}
-                        </span>
-                        <span className="rounded-lg bg-slate-100 px-2 py-1">
-                          {formatSize(result.size)}
-                        </span>
-                        <span className="rounded-lg bg-slate-100 px-2 py-1">
-                          {formatDate(result.modifiedDateTime)}
-                        </span>
-                      </div>
-                    </div>
-                  </a>
-                ))
-              )}
-            </section>
-          </div>
+                    {item}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-slate-500">Searches you use will appear here.</p>
+            )}
+          </section>
         ) : null}
 
         {activeTab === "folders" ? (

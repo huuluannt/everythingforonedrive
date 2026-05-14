@@ -10,6 +10,12 @@
   "orientation": "portrait",
   "icons": [
     {
+      "src": "/brand/logo-evrtfod.png",
+      "sizes": "1536x1024",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
       "src": "/icons/icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",

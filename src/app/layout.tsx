@@ -17,6 +17,10 @@ export const metadata: Metadata = {
   title: "Everything for OneDrive",
   description: "Fast selected-folder OneDrive name search for Android.",
   manifest: "/manifest.webmanifest",
+  icons: {
+    icon: "/brand/logo-evrtfod.png",
+    apple: "/brand/logo-evrtfod.png",
+  },
   appleWebApp: {
     capable: true,
     title: "Everything for OneDrive",

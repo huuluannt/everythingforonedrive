@@ -95,7 +95,8 @@ export async function GET(request: Request) {
              path,
              search_rank as rank
       from ranked_items
-      order by case when ${sort} = 'relevance' then search_rank end asc,
+      order by case when item_type = 'folder' then 0 else 1 end asc,
+               case when ${sort} = 'relevance' then search_rank end asc,
                case when ${sort} = 'modified' then modified_date_time end desc nulls last,
                case when ${sort} = 'name' then normalized_name end asc,
                case when ${sort} = 'size' then size end desc nulls last,
