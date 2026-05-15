@@ -51,6 +51,16 @@ function searchTermCondition(
     : sql`path_search_text like ${`%${term}%`}`;
 }
 
+function compactTermCondition(
+  sql: ReturnType<typeof getSql>,
+  column: "compact_search_text" | "compact_path_search_text",
+  term: string,
+) {
+  return column === "compact_search_text"
+    ? sql`compact_search_text like ${`%${term}%`}`
+    : sql`compact_path_search_text like ${`%${term}%`}`;
+}
+
 function literalTermCondition(
   sql: ReturnType<typeof getSql>,
   column: "name" | "full",
@@ -85,11 +95,15 @@ export async function GET(request: Request) {
     }
 
     const searchConditions = parsed.searchTerms.map((term) =>
-      searchTermCondition(sql, "search_text", term),
+      sql`(${searchTermCondition(sql, "search_text", term)} or ${compactTermCondition(sql, "compact_search_text", term)})`,
+    );
+    const compactSearchConditions = parsed.searchTerms.map((term) =>
+      compactTermCondition(sql, "compact_search_text", term),
     );
 
     if (parsed.pathKeyword) {
-      searchConditions.push(searchTermCondition(sql, "path_search_text", parsed.pathKeyword));
+      searchConditions.push(sql`(${searchTermCondition(sql, "path_search_text", parsed.pathKeyword)} or ${compactTermCondition(sql, "compact_path_search_text", parsed.pathKeyword)})`);
+      compactSearchConditions.push(compactTermCondition(sql, "compact_path_search_text", parsed.pathKeyword));
     }
 
     const literalNameConditions = parsed.literalSearchTerms.map((term) =>
@@ -102,6 +116,9 @@ export async function GET(request: Request) {
     const searchWhere = searchConditions.length > 0
       ? searchConditions.reduce((left, right) => sql`${left} and ${right}`)
       : sql`true`;
+    const compactSearchWhere = compactSearchConditions.length > 0
+      ? compactSearchConditions.reduce((left, right) => sql`${left} and ${right}`)
+      : sql`false`;
     const literalNameWhere = literalNameConditions.length > 0
       ? literalNameConditions.reduce((left, right) => sql`${left} and ${right}`)
       : sql`false`;
@@ -134,7 +151,19 @@ export async function GET(request: Request) {
                  '[^[:alnum:]]+',
                  ' ',
                  'g'
-               ) || ' ' as search_text
+               ) || ' ' as search_text,
+               regexp_replace(
+                 lower(unaccent(coalesce(path, ''))),
+                 '[^[:alnum:]]+',
+                 '',
+                 'g'
+               ) as compact_path_search_text,
+               regexp_replace(
+                 lower(unaccent(coalesce(normalized_name, '') || ' ' || coalesce(path, ''))),
+                 '[^[:alnum:]]+',
+                 '',
+                 'g'
+               ) as compact_search_text
         from drive_items
         where ${baseWhere}
       ),
@@ -153,11 +182,13 @@ export async function GET(request: Request) {
                path,
                normalized_name,
                name_search_text,
+               compact_search_text,
                case
                  when ${exact} <> '' and name_search_text = ${exactName} then 0
                  when ${exact} <> '' and name_search_text like ${prefix} then 1
                  when ${exact} <> '' and search_text like ${substring} then 2
-                 else 3
+                 when ${exact} <> '' and ${compactSearchWhere} then 3
+                 else 4
                end as search_rank,
                case
                  when ${parsed.literalText} <> '' and ${literalNameWhere} then 0
