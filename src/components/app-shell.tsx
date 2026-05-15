@@ -398,13 +398,13 @@ function SearchResultsSection({
       <div className="flex items-center justify-between px-1">
         <h2 className="text-sm font-semibold text-slate-700">Results</h2>
         <span className="flex items-center gap-1 text-xs text-slate-500">
-          {searchBusy ? <LoaderCircle size={12} className="animate-spin text-orange-600" /> : null}
+          {searchBusy ? <LoaderCircle size={12} className="animate-spin text-zinc-700" /> : null}
           {searching || searchBusy ? "Searching..." : `${results.length} shown`}
         </span>
       </div>
       {searchBusy ? (
-        <div className="mx-1 h-0.5 overflow-hidden rounded-full bg-orange-100">
-          <div className="h-full w-2/3 animate-pulse rounded-full bg-orange-500" />
+        <div className="mx-1 h-0.5 overflow-hidden rounded-full bg-zinc-200">
+          <div className="h-full w-2/3 animate-pulse rounded-full bg-zinc-700" />
         </div>
       ) : null}
       {searchError ? (
@@ -418,7 +418,7 @@ function SearchResultsSection({
               key={item}
               className="flex gap-2 rounded-lg border border-blue-100 bg-white p-2 shadow-sm"
             >
-              <div className="h-9 w-9 shrink-0 animate-pulse rounded-lg bg-orange-100" />
+              <div className="h-9 w-9 shrink-0 animate-pulse rounded-lg bg-zinc-100" />
               <div className="min-w-0 flex-1 space-y-1.5 py-0.5">
                 <div className="h-3 w-3/4 animate-pulse rounded bg-slate-200" />
                 <div className="h-2.5 w-full animate-pulse rounded bg-slate-100" />
@@ -445,7 +445,7 @@ function SearchResultsSection({
               href={result.webUrl || "#"}
               target="_blank"
               rel="noreferrer"
-              className="flex gap-2 rounded-lg border border-blue-100 bg-white p-1.5 shadow-sm transition hover:border-orange-300 hover:shadow-md"
+              className="flex gap-2 rounded-lg border border-blue-100 bg-white p-1.5 shadow-sm transition hover:border-zinc-300 hover:shadow-md"
             >
               <div
                 className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ring-1 ${visual.className}`}
@@ -1054,7 +1054,7 @@ export function AppShell() {
               width={56}
               height={56}
               priority
-              className="h-14 w-14 rounded-2xl object-cover shadow-sm ring-1 ring-orange-200"
+              className="h-14 w-14 rounded-2xl object-cover shadow-sm ring-1 ring-zinc-200"
             />
             <div>
               <h1 className="text-2xl font-semibold tracking-normal text-slate-950">
@@ -1064,7 +1064,7 @@ export function AppShell() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-orange-100 bg-white p-5 shadow-sm">
+          <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
             <h2 className="text-lg font-semibold text-slate-950">Sign in with Microsoft</h2>
             <p className="mt-2 text-sm leading-6 text-slate-600">
               The app requests only profile access and read-only OneDrive metadata. It stores file and
@@ -1072,7 +1072,7 @@ export function AppShell() {
             </p>
             <a
               href="/api/auth/microsoft/login"
-              className="mt-5 flex h-12 items-center justify-center gap-2 rounded-xl bg-orange-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-700"
+              className="mt-5 flex h-12 items-center justify-center gap-2 rounded-xl bg-zinc-900 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-zinc-800"
             >
               <Shield size={18} />
               Continue with Microsoft
@@ -1085,7 +1085,7 @@ export function AppShell() {
 
   return (
     <main className="min-h-screen bg-[var(--background)] pb-20 text-slate-950">
-      <header className="sticky top-0 z-40 border-b border-orange-100 bg-[rgba(255,251,245,0.94)] px-4 py-3 shadow-sm backdrop-blur">
+      <header className="sticky top-0 z-40 border-b border-zinc-200 bg-[rgba(248,250,252,0.94)] px-4 py-3 shadow-sm backdrop-blur">
         <div className="mx-auto flex max-w-5xl flex-col gap-3">
           <div className="flex items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-3">
@@ -1095,7 +1095,7 @@ export function AppShell() {
                 width={48}
                 height={48}
                 priority
-                className="h-12 w-12 rounded-2xl object-cover shadow-sm ring-1 ring-orange-200"
+                className="h-12 w-12 rounded-2xl object-cover shadow-sm ring-1 ring-zinc-200"
               />
               <div className="min-w-0">
                 <h1 className="truncate text-lg font-semibold tracking-normal">Everything for OneDrive</h1>
@@ -1109,7 +1109,7 @@ export function AppShell() {
                 type="button"
                 onClick={runSyncAll}
                 disabled={syncAllDisabled}
-                className="flex h-10 items-center gap-2 rounded-xl border border-orange-100 bg-white px-3 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-orange-200 hover:text-orange-700 disabled:cursor-not-allowed disabled:opacity-60"
+                className="flex h-10 items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-zinc-300 hover:text-zinc-900 disabled:cursor-not-allowed disabled:opacity-60"
                 title={`${syncDotLabel}. Click to sync all.`}
                 aria-label="Sync all folders"
               >
@@ -1123,7 +1123,7 @@ export function AppShell() {
               {authenticatedSession ? (
                 <form action="/api/auth/logout" method="post">
                   <button
-                    className="flex h-10 w-10 items-center justify-center rounded-xl border border-orange-100 bg-white text-slate-700 shadow-sm"
+                    className="flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-200 bg-white text-slate-700 shadow-sm"
                     title="Sign out"
                   >
                     <LogOut size={18} />
@@ -1133,7 +1133,7 @@ export function AppShell() {
                 <button
                   type="button"
                   disabled
-                  className="flex h-10 w-10 items-center justify-center rounded-xl border border-orange-100 bg-white text-slate-300 shadow-sm"
+                  className="flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-200 bg-white text-slate-300 shadow-sm"
                   title="Checking account"
                   aria-label="Checking account"
                 >
@@ -1142,8 +1142,8 @@ export function AppShell() {
               )}
             </div>
           </div>
-          <div className="flex min-h-12 items-center gap-2 rounded-2xl border border-orange-100 bg-white px-3 shadow-sm">
-            <Search size={19} className="shrink-0 text-orange-600" />
+          <div className="flex min-h-12 items-center gap-2 rounded-2xl border border-zinc-200 bg-white px-3 shadow-sm">
+            <Search size={19} className="shrink-0 text-zinc-700" />
             <input
               id="global-search"
               ref={searchInputRef}
@@ -1161,7 +1161,7 @@ export function AppShell() {
                 type="button"
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={clearSearch}
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:bg-orange-100 hover:text-orange-700"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:bg-zinc-200 hover:text-zinc-900"
                 title="Clear search"
                 aria-label="Clear search"
               >
@@ -1169,10 +1169,10 @@ export function AppShell() {
               </button>
             ) : null}
             {searchBusy ? (
-              <LoaderCircle size={16} className="shrink-0 animate-spin text-orange-600" />
+              <LoaderCircle size={16} className="shrink-0 animate-spin text-zinc-700" />
             ) : null}
-            <div className="hidden h-6 w-px bg-orange-100 sm:block" />
-            <SlidersHorizontal size={16} className="hidden shrink-0 text-orange-600 sm:block" />
+            <div className="hidden h-6 w-px bg-zinc-200 sm:block" />
+            <SlidersHorizontal size={16} className="hidden shrink-0 text-zinc-700 sm:block" />
             <select
               aria-label="Sort search results"
               value={searchSort}
@@ -1206,7 +1206,7 @@ export function AppShell() {
         ) : null}
 
         {activeTab === "search" ? (
-          <section className="rounded-xl border border-orange-100 bg-white p-3 shadow-sm">
+          <section className="rounded-xl border border-zinc-200 bg-white p-3 shadow-sm">
             <div className="mb-2 flex items-center justify-between">
               <span className="flex items-center gap-1.5 text-xs font-semibold text-slate-500">
                 <History size={14} />
@@ -1228,7 +1228,7 @@ export function AppShell() {
                   <button
                     key={item}
                     onClick={() => setQuery(item)}
-                    className="flex h-6 shrink-0 items-center rounded-full border border-orange-100 bg-orange-50 px-2 text-[10px] font-semibold leading-none text-orange-800"
+                    className="flex h-6 shrink-0 items-center rounded-full border border-zinc-200 bg-zinc-100 px-2 text-[10px] font-semibold leading-none text-zinc-800"
                   >
                     {item}
                   </button>
@@ -1242,7 +1242,7 @@ export function AppShell() {
 
         {activeTab === "folders" ? (
           <div className="flex flex-col gap-2">
-            <section className="rounded-xl border border-orange-100 bg-white p-3 shadow-sm">
+            <section className="rounded-xl border border-zinc-200 bg-white p-3 shadow-sm">
               <div className="flex items-center justify-between gap-2">
                 <div className="min-w-0">
                   <h2 className="text-sm font-semibold">Browse OneDrive folders</h2>
@@ -1250,7 +1250,7 @@ export function AppShell() {
                 </div>
                 {folderStack.length > 1 ? (
                   <button
-                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-orange-100 text-slate-700"
+                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-200 text-slate-700"
                     onClick={() => {
                       const nextStack = folderStack.slice(0, -1);
                       loadFolders(nextStack[nextStack.length - 1].id, nextStack);
@@ -1270,7 +1270,7 @@ export function AppShell() {
                 return (
                   <div
                     key={folder.folderId}
-                    className="flex items-center gap-2 rounded-lg border border-orange-100 bg-white p-2 shadow-sm"
+                    className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-white p-2 shadow-sm"
                   >
                     <button
                       className="flex min-w-0 flex-1 items-center gap-2 text-left"
@@ -1281,7 +1281,7 @@ export function AppShell() {
                         ])
                       }
                     >
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-orange-50 text-orange-700">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-zinc-100 text-zinc-700">
                         <Folder size={17} />
                       </span>
                       <span className="min-w-0">
@@ -1292,7 +1292,7 @@ export function AppShell() {
                     <button
                       onClick={() => addFolder(folder)}
                       disabled={selected}
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-orange-600 text-white disabled:bg-emerald-600"
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-zinc-900 text-white disabled:bg-emerald-600"
                       title={selected ? "Indexed" : "Add to index"}
                     >
                       {selected ? <Check size={16} /> : <FolderPlus size={16} />}
@@ -1314,7 +1314,7 @@ export function AppShell() {
               <button
                 onClick={runSyncAll}
                 disabled={syncAllDisabled}
-                className="flex h-9 items-center justify-center gap-2 rounded-lg bg-orange-600 px-3 text-sm font-semibold text-white disabled:bg-orange-300"
+                className="flex h-9 items-center justify-center gap-2 rounded-lg bg-zinc-900 px-3 text-sm font-semibold text-white disabled:bg-zinc-300"
               >
                 <RefreshCcw size={16} className={syncingAll ? "animate-spin" : ""} />
                 Sync all
@@ -1322,7 +1322,7 @@ export function AppShell() {
             </div>
 
             {activeIndexedFolders.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-orange-200 bg-white p-5 text-center text-sm text-slate-500">
+              <div className="rounded-xl border border-dashed border-zinc-300 bg-white p-5 text-center text-sm text-slate-500">
                 Choose folders before indexing. The app never indexes your whole OneDrive by default.
               </div>
             ) : (
@@ -1335,10 +1335,10 @@ export function AppShell() {
                   return (
                     <section
                       key={folder.id}
-                      className="rounded-xl border border-orange-100 bg-white p-2.5 shadow-sm"
+                      className="rounded-xl border border-zinc-200 bg-white p-2.5 shadow-sm"
                     >
                       <div className="flex items-start gap-2">
-                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-orange-50 text-orange-700">
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-zinc-100 text-zinc-700">
                           <Folder size={17} />
                         </div>
                         <div className="min-w-0 flex-1">
@@ -1374,17 +1374,17 @@ export function AppShell() {
                       ) : null}
 
                       {progress ? (
-                        <div className="mt-2 rounded-lg border border-orange-100 bg-orange-50 p-2">
-                          <div className="flex items-center justify-between gap-2 text-[11px] font-semibold text-orange-800">
+                        <div className="mt-2 rounded-lg border border-zinc-200 bg-zinc-50 p-2">
+                          <div className="flex items-center justify-between gap-2 text-[11px] font-semibold text-zinc-700">
                             <span>{busy ? "Sync in progress" : "Last sync run"}</span>
                             <span>{progress.hasMore ? "More batches" : "Caught up"}</span>
                           </div>
                           <div className="mt-2 h-2 overflow-hidden rounded-full bg-white">
                             <div
-                              className={`h-full rounded-full ${progress.hasMore ? "w-2/3 animate-pulse bg-orange-600" : "w-full bg-emerald-600"}`}
+                              className={`h-full rounded-full ${progress.hasMore ? "w-2/3 animate-pulse bg-zinc-700" : "w-full bg-emerald-600"}`}
                             />
                           </div>
-                          <div className="mt-1.5 grid grid-cols-3 gap-2 text-[10px] text-orange-900">
+                          <div className="mt-1.5 grid grid-cols-3 gap-2 text-[10px] text-zinc-700">
                             <span>{progress.batches} batches</span>
                             <span>{progress.pages} pages</span>
                             <span>{progress.items} items</span>
@@ -1401,7 +1401,7 @@ export function AppShell() {
                         <button
                           onClick={() => runSync(folder.id)}
                           disabled={busy}
-                          className="flex h-9 flex-1 items-center justify-center gap-2 rounded-lg bg-orange-600 px-3 text-sm font-semibold text-white disabled:bg-orange-300"
+                          className="flex h-9 flex-1 items-center justify-center gap-2 rounded-lg bg-zinc-900 px-3 text-sm font-semibold text-white disabled:bg-zinc-300"
                         >
                           <RefreshCcw size={17} className={busy ? "animate-spin" : ""} />
                           Sync now
@@ -1413,7 +1413,7 @@ export function AppShell() {
                         <button
                           onClick={() => runSync(folder.id, { full: true })}
                           disabled={busy}
-                          className="flex h-9 items-center justify-center rounded-lg border border-orange-100 px-3 text-sm font-semibold text-slate-700 disabled:text-slate-400"
+                          className="flex h-9 items-center justify-center rounded-lg border border-zinc-200 px-3 text-sm font-semibold text-slate-700 disabled:text-slate-400"
                         >
                           Full
                         </button>
@@ -1435,7 +1435,7 @@ export function AppShell() {
 
         {activeTab === "settings" ? (
           <div className="flex flex-col gap-3">
-            <section className="rounded-xl border border-orange-100 bg-white p-4 shadow-sm">
+            <section className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
               <h2 className="text-base font-semibold text-slate-950">Search capabilities</h2>
               <div className="mt-3 space-y-2 text-sm leading-6 text-slate-600">
                 <p>
@@ -1469,7 +1469,7 @@ export function AppShell() {
               </div>
             </section>
 
-            <section className="rounded-xl border border-orange-100 bg-white p-4 shadow-sm">
+            <section className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
               <h2 className="text-base font-semibold">MVP boundaries</h2>
               <div className="mt-3 space-y-3 text-sm leading-6 text-slate-600">
                 <p>Indexes selected folders only, including their subfolders.</p>
@@ -1496,7 +1496,7 @@ export function AppShell() {
 
           focusSearch();
         }}
-        className="fixed right-4 z-40 flex h-14 items-center gap-2 rounded-full bg-orange-600 px-4 text-sm font-bold text-white shadow-lg shadow-orange-600/25 ring-1 ring-orange-400/40 transition hover:bg-orange-700 active:cursor-grabbing sm:right-6 touch-none"
+        className="fixed right-4 z-40 flex h-14 items-center gap-2 rounded-full bg-zinc-900 px-4 text-sm font-bold text-white shadow-lg shadow-zinc-900/20 ring-1 ring-zinc-700/30 transition hover:bg-zinc-800 active:cursor-grabbing sm:right-6 touch-none"
         style={{ bottom: `${floatingSearchBottom}px` }}
         title="Focus search"
         aria-label="Focus search"
@@ -1505,7 +1505,7 @@ export function AppShell() {
         <span className="hidden sm:inline">Search</span>
       </button>
 
-      <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-orange-100 bg-white/95 px-3 pb-2 pt-1.5 backdrop-blur">
+      <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-zinc-200 bg-white/95 px-3 pb-2 pt-1.5 backdrop-blur">
         <div className="mx-auto grid max-w-5xl grid-cols-4 gap-2">
           {tabs.map((tab) => {
             const Icon = tab.icon;
@@ -1516,7 +1516,7 @@ export function AppShell() {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex h-11 flex-col items-center justify-center gap-0.5 rounded-lg text-[11px] font-semibold ${
-                  active ? "bg-orange-600 text-white" : "text-slate-500"
+                  active ? "bg-zinc-900 text-white" : "text-slate-500"
                 }`}
               >
                 <Icon size={16} />
