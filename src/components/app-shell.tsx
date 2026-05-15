@@ -17,6 +17,7 @@ import {
   FolderPlus,
   FolderOpen,
   History,
+  LoaderCircle,
   LogOut,
   Presentation,
   RefreshCcw,
@@ -35,6 +36,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type KeyboardEvent,
   type PointerEvent,
   type ReactNode,
 } from "react";
@@ -237,7 +239,7 @@ function statusClass(status: IndexedFolder["syncStatus"]) {
   }
 
   if (status === "syncing" || status === "pending") {
-    return "bg-blue-50 text-blue-700 ring-blue-200";
+    return "bg-orange-50 text-orange-700 ring-orange-200";
   }
 
   if (status === "paused") {
@@ -382,24 +384,51 @@ function SearchResultsSection({
   highlightTerms,
   results,
   searchError,
+  searchBusy,
   searching,
 }: {
   highlightTerms: string[];
   results: SearchResult[];
   searchError: string | null;
+  searchBusy: boolean;
   searching: boolean;
 }) {
   return (
-    <section className="flex flex-col gap-2">
+    <section className="flex flex-col gap-1.5" aria-busy={searchBusy}>
       <div className="flex items-center justify-between px-1">
         <h2 className="text-sm font-semibold text-slate-700">Results</h2>
-        <span className="text-xs text-slate-500">
-          {searching ? "Searching..." : `${results.length} shown`}
+        <span className="flex items-center gap-1 text-xs text-slate-500">
+          {searchBusy ? <LoaderCircle size={12} className="animate-spin text-orange-600" /> : null}
+          {searching || searchBusy ? "Searching..." : `${results.length} shown`}
         </span>
       </div>
+      {searchBusy ? (
+        <div className="mx-1 h-0.5 overflow-hidden rounded-full bg-orange-100">
+          <div className="h-full w-2/3 animate-pulse rounded-full bg-orange-500" />
+        </div>
+      ) : null}
       {searchError ? (
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-800">
           {searchError}
+        </div>
+      ) : results.length === 0 && searchBusy ? (
+        <div className="flex flex-col gap-1.5">
+          {[0, 1, 2].map((item) => (
+            <div
+              key={item}
+              className="flex gap-2 rounded-lg border border-blue-100 bg-white p-2 shadow-sm"
+            >
+              <div className="h-9 w-9 shrink-0 animate-pulse rounded-lg bg-orange-100" />
+              <div className="min-w-0 flex-1 space-y-1.5 py-0.5">
+                <div className="h-3 w-3/4 animate-pulse rounded bg-slate-200" />
+                <div className="h-2.5 w-full animate-pulse rounded bg-slate-100" />
+                <div className="flex gap-1">
+                  <span className="h-4 w-10 animate-pulse rounded bg-slate-100" />
+                  <span className="h-4 w-12 animate-pulse rounded bg-slate-100" />
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       ) : results.length === 0 ? (
         <div className="rounded-xl border border-dashed border-blue-200 bg-white p-6 text-center text-sm text-slate-500">
@@ -416,34 +445,34 @@ function SearchResultsSection({
               href={result.webUrl || "#"}
               target="_blank"
               rel="noreferrer"
-              className="flex gap-3 rounded-xl border border-blue-100 bg-white p-3 shadow-sm transition hover:border-orange-300 hover:shadow-md"
+              className="flex gap-2 rounded-lg border border-blue-100 bg-white p-1.5 shadow-sm transition hover:border-orange-300 hover:shadow-md"
             >
               <div
-                className={`mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ring-1 ${visual.className}`}
+                className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ring-1 ${visual.className}`}
               >
                 {visual.badge ? (
-                  <span className="text-[10px] font-black tracking-normal">{visual.badge}</span>
+                  <span className="text-[8px] font-black tracking-normal">{visual.badge}</span>
                 ) : (
-                  <Icon size={21} />
+                  <Icon size={16} />
                 )}
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex min-w-0 items-start justify-between gap-2">
-                  <h3 className="min-w-0 flex-1 break-words text-sm font-semibold text-slate-950 [overflow-wrap:anywhere]">
+                  <h3 className="min-w-0 flex-1 break-words text-[12px] font-semibold leading-4 text-slate-950 [overflow-wrap:anywhere]">
                     <HighlightedText text={result.name} terms={highlightTerms} />
                   </h3>
-                  <ExternalLink size={15} className="mt-0.5 shrink-0 text-slate-400" />
+                  <ExternalLink size={12} className="mt-0.5 shrink-0 text-slate-400" />
                 </div>
-                <p className="mt-1 break-words text-xs leading-5 text-slate-500 [overflow-wrap:anywhere]">
+                <p className="mt-0.5 overflow-hidden text-ellipsis whitespace-nowrap text-[10px] leading-3 text-slate-500">
                   <HighlightedText text={result.path} terms={highlightTerms} />
                 </p>
-                <div className="mt-2 flex flex-wrap gap-2 text-[11px] font-medium text-slate-600">
-                  <span className="rounded-lg bg-slate-100 px-2 py-1">{visual.label}</span>
-                  <span className="rounded-lg bg-slate-100 px-2 py-1">
+                <div className="mt-1 flex flex-wrap gap-1 text-[9px] font-medium leading-none text-slate-600">
+                  <span className="rounded-md bg-slate-100 px-1.5 py-0.5">{visual.label}</span>
+                  <span className="rounded-md bg-slate-100 px-1.5 py-0.5">
                     {result.extension || "no ext"}
                   </span>
-                  <span className="rounded-lg bg-slate-100 px-2 py-1">{formatSize(result.size)}</span>
-                  <span className="rounded-lg bg-slate-100 px-2 py-1">
+                  <span className="rounded-md bg-slate-100 px-1.5 py-0.5">{formatSize(result.size)}</span>
+                  <span className="rounded-md bg-slate-100 px-1.5 py-0.5">
                     {formatDate(result.modifiedDateTime)}
                   </span>
                 </div>
@@ -460,8 +489,9 @@ export function AppShell() {
   const [session, setSession] = useState<SessionState | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>("search");
   const [query, setQuery] = useState("");
+  const [submittedSearchQuery, setSubmittedSearchQuery] = useState<string | null>(null);
   const [searchSort, setSearchSort] = useState<SearchSort>("relevance");
-  const [searchHistory, setSearchHistory] = useState<string[]>(loadInitialSearchHistory);
+  const [searchHistory, setSearchHistory] = useState<string[]>([]);
   const [results, setResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
@@ -469,6 +499,7 @@ export function AppShell() {
   const [folderStack, setFolderStack] = useState<Array<{ id: string; name: string }>>([
     { id: "root", name: "OneDrive" },
   ]);
+  const [foldersLoaded, setFoldersLoaded] = useState(false);
   const [indexedFolders, setIndexedFolders] = useState<IndexedFolder[]>([]);
   const [busyFolderIds, setBusyFolderIds] = useState<Set<string>>(new Set());
   const [syncProgress, setSyncProgress] = useState<Record<string, SyncProgress>>({});
@@ -476,6 +507,7 @@ export function AppShell() {
   const [message, setMessage] = useState<string | null>(null);
   const [floatingSearchBottom, setFloatingSearchBottom] = useState(88);
   const debouncedQuery = useDebouncedValue(query, 250);
+  const effectiveSearchQuery = submittedSearchQuery ?? debouncedQuery;
   const autoSyncStarted = useRef(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const floatingSearchDrag = useRef({
@@ -493,17 +525,11 @@ export function AppShell() {
     () => indexedFolders.filter((folder) => folder.enabled),
     [indexedFolders],
   );
-  const sortedResults = useMemo(
-    () =>
-      [...results].sort((left, right) => {
-        if (left.itemType !== right.itemType) {
-          return left.itemType === "folder" ? -1 : 1;
-        }
-
-        return 0;
-      }),
-    [results],
-  );
+  const sortedResults = results;
+  const authenticatedSession = session?.authenticated ? session : null;
+  const queryHasText = query.trim().length > 0;
+  const accountLabel =
+    authenticatedSession?.user.email || authenticatedSession?.user.displayName || "Checking account...";
   const syncFinished =
     activeIndexedFolders.length > 0 &&
     activeIndexedFolders.every((folder) => folder.syncStatus === "idle") &&
@@ -514,13 +540,21 @@ export function AppShell() {
     syncingAll ||
     busyFolderIds.size > 0 ||
     activeIndexedFolders.some((folder) => folder.syncStatus !== "idle");
-  const syncDotLabel = syncFinished
-    ? "All selected folders are synced"
-    : syncNeedsAttention
-      ? "Sync is running or not finished yet"
-      : "Sync status";
+  const syncDotLabel = !authenticatedSession
+    ? "Checking account"
+    : syncFinished
+      ? "All selected folders are synced"
+      : syncNeedsAttention
+        ? "Sync is running or not finished yet"
+        : "Sync status";
+  const syncAllDisabled =
+    !authenticatedSession || syncingAll || activeIndexedFolders.length === 0 || busyFolderIds.size > 0;
+  const searchBusy =
+    queryHasText &&
+    (session === null ||
+      (Boolean(session?.authenticated) && (searching || query !== effectiveSearchQuery)));
   const showSearchResults =
-    activeTab === "search" || debouncedQuery.trim().length > 0 || Boolean(searchError);
+    activeTab === "search" && (queryHasText || searchBusy || Boolean(searchError));
   const highlightTerms = useMemo(() => {
     const parsed = parseSearchQuery(query);
 
@@ -536,8 +570,51 @@ export function AppShell() {
   }, []);
   const clearSearch = useCallback(() => {
     setQuery("");
+    setSubmittedSearchQuery("");
+    setResults([]);
+    setSearchError(null);
+    setSearching(false);
     focusSearch();
   }, [focusSearch]);
+  const handleSearchInputChange = useCallback((value: string) => {
+    setSubmittedSearchQuery(null);
+    if (value.trim()) {
+      setSearching(true);
+    } else {
+      setResults([]);
+      setSearchError(null);
+      setSearching(false);
+    }
+    setQuery(value);
+    setActiveTab("search");
+  }, []);
+  const handleSearchInputKeyDown = useCallback((event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key !== "Enter") {
+      return;
+    }
+
+    event.preventDefault();
+    setSubmittedSearchQuery(query);
+    setActiveTab("search");
+
+    if (!query.trim()) {
+      setResults([]);
+      setSearchError(null);
+      setSearching(false);
+      return;
+    }
+
+    setSearching(true);
+
+    const isMobileViewport = window.matchMedia("(pointer: coarse), (max-width: 640px)").matches;
+
+    if (!isMobileViewport) {
+      window.requestAnimationFrame(() => {
+        searchInputRef.current?.focus();
+        searchInputRef.current?.select();
+      });
+    }
+  }, [query]);
   const startFloatingSearchDrag = useCallback((event: PointerEvent<HTMLButtonElement>) => {
     floatingSearchDrag.current = {
       moved: false,
@@ -628,6 +705,7 @@ export function AppShell() {
       const data = (await response.json()) as { folders: OneDriveFolder[] };
       setFolders(data.folders);
       setFolderStack(stack);
+      setFoldersLoaded(true);
     }
   }, [handleUnauthorized]);
 
@@ -798,6 +876,14 @@ export function AppShell() {
   }
 
   useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setSearchHistory(loadInitialSearchHistory());
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
     let cancelled = false;
 
     fetch("/api/session", { cache: "no-store" })
@@ -825,37 +911,56 @@ export function AppShell() {
 
     let cancelled = false;
 
-    Promise.all([
-      fetch("/api/indexed-folders", { cache: "no-store" }),
-      fetch("/api/onedrive/folders?parentId=root", { cache: "no-store" }),
-    ])
-      .then(async ([indexedResponse, foldersResponse]) => {
+    fetch("/api/indexed-folders", { cache: "no-store" })
+      .then(async (response) => {
         if (cancelled) {
           return;
         }
 
-        if (indexedResponse.ok) {
-          const indexedData = (await indexedResponse.json()) as { folders: IndexedFolder[] };
-          setIndexedFolders(indexedData.folders);
-        } else if (indexedResponse.status === 401) {
+        if (response.status === 401) {
           handleUnauthorized();
           return;
         }
 
-        if (foldersResponse.ok) {
-          const folderData = (await foldersResponse.json()) as { folders: OneDriveFolder[] };
-          setFolders(folderData.folders);
-          setFolderStack([{ id: "root", name: "OneDrive" }]);
-        } else if (foldersResponse.status === 401) {
-          handleUnauthorized();
+        if (response.ok) {
+          const data = (await response.json()) as { folders: IndexedFolder[] };
+          if (!cancelled) {
+            setIndexedFolders(data.folders);
+          }
         }
       })
-      .catch(() => setMessage("Could not load OneDrive data."));
+      .catch(() => {
+        if (!cancelled) {
+          setMessage("Could not load selected folders.");
+        }
+      });
 
     return () => {
       cancelled = true;
     };
   }, [handleUnauthorized, session?.authenticated]);
+
+  useEffect(() => {
+    if (!session?.authenticated || activeTab !== "folders" || foldersLoaded) {
+      return;
+    }
+
+    fetch("/api/onedrive/folders?parentId=root", { cache: "no-store" })
+      .then(async (response) => {
+        if (response.status === 401) {
+          handleUnauthorized();
+          return;
+        }
+
+        if (response.ok) {
+          const data = (await response.json()) as { folders: OneDriveFolder[] };
+          setFolders(data.folders);
+          setFolderStack([{ id: "root", name: "OneDrive" }]);
+          setFoldersLoaded(true);
+        }
+      })
+      .catch(() => setMessage("Could not load OneDrive folders."));
+  }, [activeTab, foldersLoaded, handleUnauthorized, session?.authenticated]);
 
   useEffect(() => {
     if (!session?.authenticated || indexedFolders.length === 0 || autoSyncStarted.current) {
@@ -871,13 +976,17 @@ export function AppShell() {
       for (const folder of candidates.slice(0, 5)) {
         runSync(folder.id, { oneBatch: true });
       }
-    }, 0);
+    }, 1500);
 
     return () => window.clearTimeout(timer);
   }, [session, indexedFolders, runSync]);
 
   useEffect(() => {
     if (!session?.authenticated) {
+      return;
+    }
+
+    if (!effectiveSearchQuery.trim()) {
       return;
     }
 
@@ -889,7 +998,7 @@ export function AppShell() {
 
       try {
         const response = await fetch(
-          `/api/search?q=${encodeURIComponent(debouncedQuery)}&limit=50&sort=${searchSort}`,
+          `/api/search?q=${encodeURIComponent(effectiveSearchQuery)}&limit=50&sort=${searchSort}`,
         );
 
         if (cancelled) {
@@ -913,7 +1022,7 @@ export function AppShell() {
         }
 
         setResults(data.results);
-        rememberSearch(debouncedQuery);
+        rememberSearch(effectiveSearchQuery);
       } catch {
         if (cancelled) {
           return;
@@ -932,17 +1041,9 @@ export function AppShell() {
     return () => {
       cancelled = true;
     };
-  }, [debouncedQuery, handleUnauthorized, rememberSearch, searchSort, session?.authenticated]);
+  }, [effectiveSearchQuery, handleUnauthorized, rememberSearch, searchSort, session?.authenticated]);
 
-  if (session === null) {
-    return (
-      <main className="flex min-h-screen items-center justify-center px-6">
-        <div className="h-10 w-10 animate-spin rounded-full border-2 border-blue-200 border-t-blue-700" />
-      </main>
-    );
-  }
-
-  if (!session.authenticated) {
+  if (session?.authenticated === false) {
     return (
       <main className="min-h-screen bg-[var(--background)] px-5 py-8">
         <section className="mx-auto flex max-w-md flex-col gap-7">
@@ -999,15 +1100,18 @@ export function AppShell() {
               <div className="min-w-0">
                 <h1 className="truncate text-lg font-semibold tracking-normal">Everything for OneDrive</h1>
                 <p className="truncate text-xs font-medium text-slate-600">
-                  {session.user.email || session.user.displayName || "Microsoft account"}
+                  {accountLabel}
                 </p>
               </div>
             </div>
             <div className="flex shrink-0 items-center gap-2">
-              <div
-                className="flex h-10 items-center gap-2 rounded-xl border border-orange-100 bg-white px-3 text-xs font-semibold text-slate-600 shadow-sm"
-                title={syncDotLabel}
-                aria-label={syncDotLabel}
+              <button
+                type="button"
+                onClick={runSyncAll}
+                disabled={syncAllDisabled}
+                className="flex h-10 items-center gap-2 rounded-xl border border-orange-100 bg-white px-3 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-orange-200 hover:text-orange-700 disabled:cursor-not-allowed disabled:opacity-60"
+                title={`${syncDotLabel}. Click to sync all.`}
+                aria-label="Sync all folders"
               >
                 <span
                   className={`h-2.5 w-2.5 rounded-full ${
@@ -1015,15 +1119,27 @@ export function AppShell() {
                   }`}
                 />
                 <span className="hidden sm:inline">{syncFinished ? "Synced" : "Syncing"}</span>
-              </div>
-              <form action="/api/auth/logout" method="post">
+              </button>
+              {authenticatedSession ? (
+                <form action="/api/auth/logout" method="post">
+                  <button
+                    className="flex h-10 w-10 items-center justify-center rounded-xl border border-orange-100 bg-white text-slate-700 shadow-sm"
+                    title="Sign out"
+                  >
+                    <LogOut size={18} />
+                  </button>
+                </form>
+              ) : (
                 <button
-                  className="flex h-10 w-10 items-center justify-center rounded-xl border border-orange-100 bg-white text-slate-700 shadow-sm"
-                  title="Sign out"
+                  type="button"
+                  disabled
+                  className="flex h-10 w-10 items-center justify-center rounded-xl border border-orange-100 bg-white text-slate-300 shadow-sm"
+                  title="Checking account"
+                  aria-label="Checking account"
                 >
                   <LogOut size={18} />
                 </button>
-              </form>
+              )}
             </div>
           </div>
           <div className="flex min-h-12 items-center gap-2 rounded-2xl border border-orange-100 bg-white px-3 shadow-sm">
@@ -1032,7 +1148,8 @@ export function AppShell() {
               id="global-search"
               ref={searchInputRef}
               value={query}
-              onChange={(event) => setQuery(event.target.value)}
+              onChange={(event) => handleSearchInputChange(event.target.value)}
+              onKeyDown={handleSearchInputKeyDown}
               onClick={(event) => event.currentTarget.select()}
               onFocus={(event) => event.currentTarget.select()}
               placeholder="Search files, folders, ext:pdf, type:folder..."
@@ -1050,6 +1167,9 @@ export function AppShell() {
               >
                 <X size={16} />
               </button>
+            ) : null}
+            {searchBusy ? (
+              <LoaderCircle size={16} className="shrink-0 animate-spin text-orange-600" />
             ) : null}
             <div className="hidden h-6 w-px bg-orange-100 sm:block" />
             <SlidersHorizontal size={16} className="hidden shrink-0 text-orange-600 sm:block" />
@@ -1080,6 +1200,7 @@ export function AppShell() {
             highlightTerms={highlightTerms}
             results={sortedResults}
             searchError={searchError}
+            searchBusy={searchBusy}
             searching={searching}
           />
         ) : null}
@@ -1120,16 +1241,16 @@ export function AppShell() {
         ) : null}
 
         {activeTab === "folders" ? (
-          <div className="flex flex-col gap-4">
-            <section className="rounded-2xl border border-blue-100 bg-white p-4 shadow-sm">
+          <div className="flex flex-col gap-2">
+            <section className="rounded-xl border border-orange-100 bg-white p-3 shadow-sm">
               <div className="flex items-center justify-between gap-2">
                 <div className="min-w-0">
-                  <h2 className="text-base font-semibold">Browse OneDrive folders</h2>
-                  <p className="truncate text-xs text-slate-500">{activeFolder.name}</p>
+                  <h2 className="text-sm font-semibold">Browse OneDrive folders</h2>
+                  <p className="truncate text-[11px] text-slate-500">{activeFolder.name}</p>
                 </div>
                 {folderStack.length > 1 ? (
                   <button
-                    className="flex h-10 w-10 items-center justify-center rounded-xl border border-blue-100 text-slate-700"
+                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-orange-100 text-slate-700"
                     onClick={() => {
                       const nextStack = folderStack.slice(0, -1);
                       loadFolders(nextStack[nextStack.length - 1].id, nextStack);
@@ -1142,17 +1263,17 @@ export function AppShell() {
               </div>
             </section>
 
-            <section className="flex flex-col gap-2">
+            <section className="flex flex-col gap-1.5">
               {folders.map((folder) => {
                 const selected = indexedKeys.has(folder.folderId);
 
                 return (
                   <div
                     key={folder.folderId}
-                    className="flex items-center gap-3 rounded-2xl border border-blue-100 bg-white p-3 shadow-sm"
+                    className="flex items-center gap-2 rounded-lg border border-orange-100 bg-white p-2 shadow-sm"
                   >
                     <button
-                      className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                      className="flex min-w-0 flex-1 items-center gap-2 text-left"
                       onClick={() =>
                         loadFolders(folder.folderId, [
                           ...folderStack,
@@ -1160,21 +1281,21 @@ export function AppShell() {
                         ])
                       }
                     >
-                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
-                        <Folder size={20} />
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-orange-50 text-orange-700">
+                        <Folder size={17} />
                       </span>
                       <span className="min-w-0">
-                        <span className="block truncate text-sm font-semibold">{folder.folderName}</span>
-                        <span className="block truncate text-xs text-slate-500">{folder.folderPath}</span>
+                        <span className="block truncate text-[13px] font-semibold leading-4">{folder.folderName}</span>
+                        <span className="block truncate text-[11px] leading-4 text-slate-500">{folder.folderPath}</span>
                       </span>
                     </button>
                     <button
                       onClick={() => addFolder(folder)}
                       disabled={selected}
-                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-700 text-white disabled:bg-emerald-600"
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-orange-600 text-white disabled:bg-emerald-600"
                       title={selected ? "Indexed" : "Add to index"}
                     >
-                      {selected ? <Check size={18} /> : <FolderPlus size={18} />}
+                      {selected ? <Check size={16} /> : <FolderPlus size={16} />}
                     </button>
                   </div>
                 );
@@ -1184,7 +1305,7 @@ export function AppShell() {
         ) : null}
 
         {activeTab === "sync" ? (
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between gap-3 px-1">
               <div>
                 <h2 className="text-sm font-semibold text-slate-700">Selected folders</h2>
@@ -1192,8 +1313,8 @@ export function AppShell() {
               </div>
               <button
                 onClick={runSyncAll}
-                disabled={syncingAll || activeIndexedFolders.length === 0 || busyFolderIds.size > 0}
-                className="flex h-10 items-center justify-center gap-2 rounded-xl bg-blue-700 px-3 text-sm font-semibold text-white disabled:bg-blue-300"
+                disabled={syncAllDisabled}
+                className="flex h-9 items-center justify-center gap-2 rounded-lg bg-orange-600 px-3 text-sm font-semibold text-white disabled:bg-orange-300"
               >
                 <RefreshCcw size={16} className={syncingAll ? "animate-spin" : ""} />
                 Sync all
@@ -1201,7 +1322,7 @@ export function AppShell() {
             </div>
 
             {activeIndexedFolders.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-blue-200 bg-white p-6 text-center text-sm text-slate-500">
+              <div className="rounded-xl border border-dashed border-orange-200 bg-white p-5 text-center text-sm text-slate-500">
                 Choose folders before indexing. The app never indexes your whole OneDrive by default.
               </div>
             ) : (
@@ -1214,93 +1335,92 @@ export function AppShell() {
                   return (
                     <section
                       key={folder.id}
-                      className="rounded-2xl border border-blue-100 bg-white p-4 shadow-sm"
+                      className="rounded-xl border border-orange-100 bg-white p-2.5 shadow-sm"
                     >
-                      <div className="flex items-start gap-3">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
-                          <Folder size={20} />
+                      <div className="flex items-start gap-2">
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-orange-50 text-orange-700">
+                          <Folder size={17} />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <h3 className="break-words text-sm font-semibold">{folder.folderName}</h3>
-                          <p className="mt-1 break-words text-xs leading-5 text-slate-500">
+                          <h3 className="break-words text-[13px] font-semibold leading-4">{folder.folderName}</h3>
+                          <p className="mt-0.5 truncate text-[11px] leading-4 text-slate-500">
                             {folder.folderPath}
                           </p>
                         </div>
-                        <span
-                          className={`rounded-full px-2 py-1 text-[11px] font-semibold ring-1 ${statusClass(folder.syncStatus)}`}
-                        >
-                          {busy ? "syncing" : folder.syncStatus}
-                        </span>
-                      </div>
-
-                      <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-slate-600">
-                        <div className="rounded-xl bg-slate-50 p-3">
-                          <span className="block text-slate-400">Items</span>
-                          <strong className="text-base text-slate-950">{folder.itemCount}</strong>
-                        </div>
-                        <div className="rounded-xl bg-slate-50 p-3">
-                          <span className="block text-slate-400">Last sync</span>
-                          <strong className="text-sm text-slate-950">{formatDate(folder.lastSyncAt)}</strong>
+                        <div className="flex max-w-[52%] shrink-0 flex-wrap items-center justify-end gap-1.5 text-[10px]">
+                          <span className="rounded-full bg-slate-50 px-2 py-0.5 font-semibold text-slate-600">
+                            <span className="text-slate-400">Last sync </span>
+                            {formatDate(folder.lastSyncAt)}
+                          </span>
+                          <span
+                            className={`rounded-full px-2 py-0.5 font-semibold ring-1 ${statusClass(folder.syncStatus)}`}
+                          >
+                            {busy ? "syncing" : folder.syncStatus}
+                          </span>
                         </div>
                       </div>
 
                       {folder.lastError ? (
-                        <p className="mt-3 rounded-xl bg-rose-50 px-3 py-2 text-xs leading-5 text-rose-700">
+                        <p className="mt-2 rounded-lg bg-rose-50 px-2 py-1.5 text-[11px] leading-4 text-rose-700">
                           {folder.lastError}
                         </p>
                       ) : null}
 
                       {warning ? (
-                        <p className="mt-3 flex gap-2 rounded-xl bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800">
-                          <TriangleAlert size={15} className="mt-0.5 shrink-0" />
+                        <p className="mt-2 flex gap-1.5 rounded-lg bg-amber-50 px-2 py-1.5 text-[11px] leading-4 text-amber-800">
+                          <TriangleAlert size={14} className="mt-0.5 shrink-0" />
                           {warning}
                         </p>
                       ) : null}
 
                       {progress ? (
-                        <div className="mt-3 rounded-xl border border-blue-100 bg-blue-50 p-3">
-                          <div className="flex items-center justify-between gap-2 text-xs font-semibold text-blue-800">
+                        <div className="mt-2 rounded-lg border border-orange-100 bg-orange-50 p-2">
+                          <div className="flex items-center justify-between gap-2 text-[11px] font-semibold text-orange-800">
                             <span>{busy ? "Sync in progress" : "Last sync run"}</span>
                             <span>{progress.hasMore ? "More batches" : "Caught up"}</span>
                           </div>
                           <div className="mt-2 h-2 overflow-hidden rounded-full bg-white">
                             <div
-                              className={`h-full rounded-full ${progress.hasMore ? "w-2/3 animate-pulse bg-blue-700" : "w-full bg-emerald-600"}`}
+                              className={`h-full rounded-full ${progress.hasMore ? "w-2/3 animate-pulse bg-orange-600" : "w-full bg-emerald-600"}`}
                             />
                           </div>
-                          <div className="mt-2 grid grid-cols-3 gap-2 text-[11px] text-blue-900">
+                          <div className="mt-1.5 grid grid-cols-3 gap-2 text-[10px] text-orange-900">
                             <span>{progress.batches} batches</span>
                             <span>{progress.pages} pages</span>
                             <span>{progress.items} items</span>
                           </div>
                           {progress.retryAfter ? (
-                            <p className="mt-2 text-[11px] text-amber-700">
+                            <p className="mt-1.5 text-[10px] text-amber-700">
                               Microsoft throttled requests. Retrying after about {progress.retryAfter}s.
                             </p>
                           ) : null}
                         </div>
                       ) : null}
 
-                      <div className="mt-4 flex gap-2">
+                      <div className="mt-2 flex gap-1.5">
                         <button
                           onClick={() => runSync(folder.id)}
                           disabled={busy}
-                          className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-blue-700 px-3 text-sm font-semibold text-white disabled:bg-blue-300"
+                          className="flex h-9 flex-1 items-center justify-center gap-2 rounded-lg bg-orange-600 px-3 text-sm font-semibold text-white disabled:bg-orange-300"
                         >
                           <RefreshCcw size={17} className={busy ? "animate-spin" : ""} />
                           Sync now
                         </button>
+                        <div className="flex h-9 min-w-[72px] flex-col items-center justify-center rounded-lg bg-slate-50 px-2 leading-none">
+                          <span className="text-[9px] font-semibold text-slate-400">Items</span>
+                          <strong className="mt-0.5 text-[11px] text-slate-900">{folder.itemCount}</strong>
+                        </div>
                         <button
                           onClick={() => runSync(folder.id, { full: true })}
                           disabled={busy}
-                          className="flex h-11 items-center justify-center rounded-xl border border-blue-100 px-3 text-sm font-semibold text-slate-700 disabled:text-slate-400"
+                          className="flex h-9 items-center justify-center rounded-lg border border-orange-100 px-3 text-sm font-semibold text-slate-700 disabled:text-slate-400"
                         >
                           Full
                         </button>
                         <button
                           onClick={() => removeFolder(folder.id)}
                           disabled={busy}
-                          className="flex h-11 w-11 items-center justify-center rounded-xl border border-rose-100 text-rose-700 disabled:text-rose-300"
+                          className="flex h-9 w-9 items-center justify-center rounded-lg border border-rose-100 text-rose-700 disabled:text-rose-300"
                           title="Remove folder from index"
                         >
                           <Trash2 size={17} />
@@ -1314,15 +1434,51 @@ export function AppShell() {
         ) : null}
 
         {activeTab === "settings" ? (
-          <section className="rounded-2xl border border-blue-100 bg-white p-4 shadow-sm">
-            <h2 className="text-base font-semibold">MVP boundaries</h2>
-            <div className="mt-3 space-y-3 text-sm leading-6 text-slate-600">
-              <p>Indexes selected folders only, including their subfolders.</p>
-              <p>Searches names and metadata only. It does not store file contents.</p>
-              <p>Offline mode caches the app shell and recent search API responses.</p>
-              <p>Delta sync is attempted per selected folder using Microsoft Graph delta links.</p>
-            </div>
-          </section>
+          <div className="flex flex-col gap-3">
+            <section className="rounded-xl border border-orange-100 bg-white p-4 shadow-sm">
+              <h2 className="text-base font-semibold text-slate-950">Search capabilities</h2>
+              <div className="mt-3 space-y-2 text-sm leading-6 text-slate-600">
+                <p>
+                  Search không dấu: gõ <strong>trong</strong> vẫn tìm được các tên có dấu như{" "}
+                  <strong>Trọng</strong>.
+                </p>
+                <p>
+                  Search có dấu được ưu tiên chính xác hơn: gõ <strong>Trọng</strong> sẽ xếp kết quả
+                  chứa đúng chữ <strong>Trọng</strong> trước các kết quả chỉ khớp kiểu không dấu như{" "}
+                  <strong>trong</strong>.
+                </p>
+                <p>
+                  Có thể đổi thứ tự từ khóa: <strong>C2024 HD</strong>, <strong>KHCN C2024</strong>{" "}
+                  hoặc nhiều cụm từ rời vẫn tìm trong cùng tên và đường dẫn.
+                </p>
+                <p>
+                  Search theo tên file, tên folder và path để tìm những file nằm sâu trong thư mục.
+                </p>
+                <p>
+                  Lọc theo loại bằng cú pháp <strong>type:folder</strong> hoặc <strong>type:file</strong>.
+                </p>
+                <p>
+                  Lọc theo định dạng bằng <strong>ext:pdf</strong>, <strong>ext:xls</strong>,{" "}
+                  <strong>ext:docx</strong>, <strong>ext:pptx</strong>, <strong>ext:mp4</strong>,{" "}
+                  <strong>ext:mp3</strong>, <strong>ext:jpg</strong>...
+                </p>
+                <p>
+                  Lọc theo đường dẫn bằng <strong>path:downloads</strong> hoặc một từ khóa trong tên
+                  thư mục.
+                </p>
+              </div>
+            </section>
+
+            <section className="rounded-xl border border-orange-100 bg-white p-4 shadow-sm">
+              <h2 className="text-base font-semibold">MVP boundaries</h2>
+              <div className="mt-3 space-y-3 text-sm leading-6 text-slate-600">
+                <p>Indexes selected folders only, including their subfolders.</p>
+                <p>Searches names and metadata only. It does not store file contents.</p>
+                <p>Offline mode caches the app shell and recent search API responses.</p>
+                <p>Delta sync is attempted per selected folder using Microsoft Graph delta links.</p>
+              </div>
+            </section>
+          </div>
         ) : null}
       </section>
 
@@ -1349,7 +1505,7 @@ export function AppShell() {
         <span className="hidden sm:inline">Search</span>
       </button>
 
-      <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-blue-100 bg-white/95 px-3 pb-2 pt-1.5 backdrop-blur">
+      <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-orange-100 bg-white/95 px-3 pb-2 pt-1.5 backdrop-blur">
         <div className="mx-auto grid max-w-5xl grid-cols-4 gap-2">
           {tabs.map((tab) => {
             const Icon = tab.icon;
@@ -1360,7 +1516,7 @@ export function AppShell() {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex h-11 flex-col items-center justify-center gap-0.5 rounded-lg text-[11px] font-semibold ${
-                  active ? "bg-blue-700 text-white" : "text-slate-500"
+                  active ? "bg-orange-600 text-white" : "text-slate-500"
                 }`}
               >
                 <Icon size={16} />

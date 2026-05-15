@@ -51,6 +51,16 @@ function searchTermCondition(
     : sql`path_search_text like ${`%${term}%`}`;
 }
 
+function literalTermCondition(
+  sql: ReturnType<typeof getSql>,
+  column: "name" | "full",
+  term: string,
+) {
+  return column === "name"
+    ? sql`lower(coalesce(name, '')) like ${`%${term}%`}`
+    : sql`lower(coalesce(name, '') || ' ' || coalesce(path, '')) like ${`%${term}%`}`;
+}
+
 export async function GET(request: Request) {
   try {
     const session = await requireSession();
@@ -82,10 +92,22 @@ export async function GET(request: Request) {
       searchConditions.push(searchTermCondition(sql, "path_search_text", parsed.pathKeyword));
     }
 
+    const literalNameConditions = parsed.literalSearchTerms.map((term) =>
+      literalTermCondition(sql, "name", term),
+    );
+    const literalFullConditions = parsed.literalSearchTerms.map((term) =>
+      literalTermCondition(sql, "full", term),
+    );
     const baseWhere = baseConditions.reduce((left, right) => sql`${left} and ${right}`);
     const searchWhere = searchConditions.length > 0
       ? searchConditions.reduce((left, right) => sql`${left} and ${right}`)
       : sql`true`;
+    const literalNameWhere = literalNameConditions.length > 0
+      ? literalNameConditions.reduce((left, right) => sql`${left} and ${right}`)
+      : sql`false`;
+    const literalFullWhere = literalFullConditions.length > 0
+      ? literalFullConditions.reduce((left, right) => sql`${left} and ${right}`)
+      : sql`false`;
     const exact = parsed.normalizedText;
     const exactName = ` ${parsed.normalizedText} `;
     const prefix = ` ${parsed.normalizedText}%`;
@@ -136,7 +158,12 @@ export async function GET(request: Request) {
                  when ${exact} <> '' and name_search_text like ${prefix} then 1
                  when ${exact} <> '' and search_text like ${substring} then 2
                  else 3
-               end as search_rank
+               end as search_rank,
+               case
+                 when ${parsed.literalText} <> '' and ${literalNameWhere} then 0
+                 when ${parsed.literalText} <> '' and ${literalFullWhere} then 1
+                 else 2
+               end as accent_rank
         from searchable_items
         where ${searchWhere}
       )
@@ -152,14 +179,17 @@ export async function GET(request: Request) {
              modified_date_time,
              web_url,
              path,
-             search_rank as rank
+             search_rank as rank,
+             accent_rank
       from ranked_items
-      order by case when item_type = 'folder' then 0 else 1 end asc,
+      order by case when ${sort} = 'relevance' then accent_rank end asc,
                case when ${sort} = 'relevance' then search_rank end asc,
+               case when item_type = 'folder' then 0 else 1 end asc,
                case when ${sort} = 'modified' then modified_date_time end desc nulls last,
                case when ${sort} = 'name' then normalized_name end asc,
                case when ${sort} = 'size' then size end desc nulls last,
                search_rank asc,
+               accent_rank asc,
                modified_date_time desc nulls last,
                normalized_name asc
       limit ${limit}

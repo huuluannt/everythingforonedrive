@@ -1,5 +1,7 @@
 export type ParsedSearch = {
   text: string;
+  literalText: string;
+  literalSearchTerms: string[];
   normalizedText: string;
   searchTerms: string[];
   extensions: string[];
@@ -15,6 +17,14 @@ export function normalizeSearchText(input: string) {
     .replace(/Đ/g, "d")
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+export function normalizeLiteralSearchText(input: string) {
+  return input
+    .normalize("NFC")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
     .trim();
 }
 
@@ -59,10 +69,13 @@ export function parseSearchQuery(input: string): ParsedSearch {
   }
 
   const text = textTokens.join(" ");
+  const literalText = normalizeLiteralSearchText(text);
   const normalizedText = normalizeSearchText(text);
 
   return {
     text,
+    literalText,
+    literalSearchTerms: literalText.split(/\s+/).filter(Boolean),
     normalizedText,
     searchTerms: normalizedText.split(/\s+/).filter(Boolean),
     extensions,
