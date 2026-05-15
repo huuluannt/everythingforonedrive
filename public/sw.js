@@ -1,6 +1,6 @@
-const SHELL_CACHE = "everything-onedrive-shell-v1";
+const SHELL_CACHE = "everything-onedrive-shell-v2";
 const SEARCH_CACHE = "everything-onedrive-search-v1";
-const SHELL_URLS = ["/", "/manifest.webmanifest", "/icons/icon.svg"];
+const SHELL_URLS = ["/", "/manifest.webmanifest", "/favicon.ico", "/icons/icon-192.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
