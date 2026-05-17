@@ -516,6 +516,36 @@ export function AppShell() {
     startY: 0,
   });
 
+  const userInitial = useMemo(() => {
+    if (!session?.authenticated || !session.user) return "";
+    const name = session.user.displayName || session.user.email || "";
+    return name.charAt(0).toUpperCase();
+  }, [session]);
+
+  const handleMicrosoftLogin = useCallback((event: React.MouseEvent<HTMLAnchorElement>) => {
+    const isIframe = typeof window !== "undefined" && window.self !== window.top;
+    if (isIframe) {
+      event.preventDefault();
+      
+      const width = 600;
+      const height = 650;
+      const left = window.screen.width / 2 - width / 2;
+      const top = window.screen.height / 2 - height / 2;
+      
+      const popup = window.open(
+        "/api/auth/microsoft/login",
+        "Microsoft Login",
+        `width=${width},height=${height},top=${top},left=${left},scrollbars=yes,status=yes`
+      );
+      
+      if (popup) {
+        popup.focus();
+      } else {
+        setMessage("Please enable popups for this site to log in.");
+      }
+    }
+  }, []);
+
   const activeFolder = folderStack[folderStack.length - 1];
   const indexedKeys = useMemo(
     () => new Set(indexedFolders.filter((folder) => folder.enabled).map((folder) => folder.folderId)),
@@ -905,6 +935,34 @@ export function AppShell() {
   }, []);
 
   useEffect(() => {
+    function handleMessage(event: MessageEvent) {
+      if (event.origin !== window.location.origin) return;
+      
+      if (event.data?.type === "MICROSOFT_AUTH_COMPLETED") {
+        fetch("/api/session", { cache: "no-store" })
+          .then((response) => response.json())
+          .then((data: SessionState) => {
+            setSession(data);
+            setMessage("Signed in successfully!");
+          })
+          .catch(() => {
+            setMessage("Failed to load signed in session.");
+          });
+      }
+    }
+    
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.opener && session?.authenticated) {
+      window.opener.postMessage({ type: "MICROSOFT_AUTH_COMPLETED" }, window.location.origin);
+      window.close();
+    }
+  }, [session]);
+
+  useEffect(() => {
     if (!session?.authenticated) {
       return;
     }
@@ -1072,6 +1130,7 @@ export function AppShell() {
             </p>
             <a
               href="/api/auth/microsoft/login"
+              onClick={handleMicrosoftLogin}
               className="mt-5 flex h-12 items-center justify-center gap-2 rounded-xl bg-zinc-900 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-zinc-800"
             >
               <Shield size={18} />
@@ -1121,14 +1180,22 @@ export function AppShell() {
                 <span className="hidden sm:inline">{syncFinished ? "Synced" : "Syncing"}</span>
               </button>
               {authenticatedSession ? (
-                <form action="/api/auth/logout" method="post">
-                  <button
-                    className="flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-200 bg-white text-slate-700 shadow-sm"
-                    title="Sign out"
+                <div className="flex items-center gap-2">
+                  <div
+                    className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-sm font-bold text-white shadow-sm ring-1 ring-blue-200"
+                    title={authenticatedSession.user.displayName || authenticatedSession.user.email || ""}
                   >
-                    <LogOut size={18} />
-                  </button>
-                </form>
+                    {userInitial}
+                  </div>
+                  <form action="/api/auth/logout" method="post">
+                    <button
+                      className="flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-200 bg-white text-slate-700 shadow-sm transition hover:border-zinc-300 hover:text-zinc-950"
+                      title="Sign out"
+                    >
+                      <LogOut size={18} />
+                    </button>
+                  </form>
+                </div>
               ) : (
                 <button
                   type="button"
