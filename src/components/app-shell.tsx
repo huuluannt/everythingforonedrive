@@ -936,9 +936,12 @@ export function AppShell() {
 
   useEffect(() => {
     function handleMessage(event: MessageEvent) {
-      if (event.origin !== window.location.origin) return;
-      
       if (event.data?.type === "MICROSOFT_AUTH_COMPLETED") {
+        console.log("Microsoft OAuth completed in popup. Origin:", event.origin);
+        if (event.origin !== window.location.origin) {
+          console.warn("Origin mismatch for postMessage:", event.origin, "vs expected:", window.location.origin);
+        }
+        
         fetch("/api/session", { cache: "no-store" })
           .then((response) => response.json())
           .then((data: SessionState) => {
@@ -957,8 +960,12 @@ export function AppShell() {
 
   useEffect(() => {
     if (typeof window !== "undefined" && window.opener && session?.authenticated) {
-      window.opener.postMessage({ type: "MICROSOFT_AUTH_COMPLETED" }, window.location.origin);
-      window.close();
+      window.opener.postMessage({ type: "MICROSOFT_AUTH_COMPLETED" }, "*");
+      
+      // Introduce a 300ms delay to guarantee the postMessage is fully dispatched before the window is destroyed
+      setTimeout(() => {
+        window.close();
+      }, 300);
     }
   }, [session]);
 
