@@ -1,4 +1,4 @@
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 
 import {
   MICROSOFT_AUTHORITY,
@@ -162,7 +162,19 @@ export async function createSession(profile: MicrosoftProfile, token: MicrosoftT
 
 export async function getCurrentSession(): Promise<CurrentSession | null> {
   const cookieStore = await cookies();
-  const sessionToken = cookieStore.get(SESSION_COOKIE)?.value;
+  let sessionToken = cookieStore.get(SESSION_COOKIE)?.value;
+
+  if (!sessionToken) {
+    try {
+      const headersList = await headers();
+      const authHeader = headersList.get("authorization");
+      if (authHeader && authHeader.startsWith("Bearer ")) {
+        sessionToken = authHeader.substring(7);
+      }
+    } catch (e) {
+      console.error("Error reading authorization header:", e);
+    }
+  }
 
   if (!sessionToken) {
     return null;

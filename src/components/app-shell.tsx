@@ -46,6 +46,7 @@ type SessionState =
   | { authenticated: false }
   | {
       authenticated: true;
+      sessionToken?: string;
       user: {
         id: string;
         displayName: string | null;
@@ -485,6 +486,22 @@ function SearchResultsSection({
   );
 }
 
+if (typeof window !== "undefined" && !(window as any).__efo_fetch_intercepted) {
+  (window as any).__efo_fetch_intercepted = true;
+  const originalFetch = window.fetch;
+  window.fetch = function (input: RequestInfo | URL, init?: RequestInit) {
+    const token = localStorage.getItem("efo_session_token");
+    if (token && typeof input === "string" && input.startsWith("/api/")) {
+      const newInit = { ...init };
+      const headers = new Headers(newInit.headers);
+      headers.set("Authorization", `Bearer ${token}`);
+      newInit.headers = headers;
+      return originalFetch(input, newInit);
+    }
+    return originalFetch(input, init);
+  };
+}
+
 export function AppShell() {
   const [session, setSession] = useState<SessionState | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>("search");
@@ -921,6 +938,9 @@ export function AppShell() {
       .then((data: SessionState) => {
         if (!cancelled) {
           setSession(data);
+          if (!data.authenticated) {
+            localStorage.removeItem("efo_session_token");
+          }
         }
       })
       .catch(() => {
@@ -942,6 +962,11 @@ export function AppShell() {
           console.warn("Origin mismatch for postMessage:", event.origin, "vs expected:", window.location.origin);
         }
         
+        const token = event.data?.sessionToken;
+        if (token) {
+          localStorage.setItem("efo_session_token", token);
+        }
+        
         fetch("/api/session", { cache: "no-store" })
           .then((response) => response.json())
           .then((data: SessionState) => {
@@ -960,7 +985,11 @@ export function AppShell() {
 
   useEffect(() => {
     if (typeof window !== "undefined" && window.opener && session?.authenticated) {
-      window.opener.postMessage({ type: "MICROSOFT_AUTH_COMPLETED" }, "*");
+      const token = (session as any).sessionToken;
+      window.opener.postMessage({ 
+        type: "MICROSOFT_AUTH_COMPLETED",
+        sessionToken: token
+      }, "*");
       
       // Introduce a 300ms delay to guarantee the postMessage is fully dispatched before the window is destroyed
       setTimeout(() => {
